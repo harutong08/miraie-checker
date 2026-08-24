@@ -300,7 +300,7 @@ canvas{display:block;max-width:100%;cursor:crosshair}
 
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn" id="apply" type="button">入力欄に反映</button>
-        <button class="btn" id="clearImg" type="button">画像を外す</button>
+        <button class="btn" id="clearImg" type="button">画像をリセット</button>
       </div>
     </div>
 
@@ -636,6 +636,13 @@ canvas{display:block;max-width:100%;cursor:crosshair}
       judge();
     },
     getModule:function(){return num('mod')||910;},
+    // 画像を外したときに、その画像から読み取って入った値だけを空欄に戻す。
+    // 延べ面積・積雪条件・箇所数・モジュール寸法は次の図面にも使う設定なので触らない
+    clear:function(){
+      vals={x:{},y:{}};
+      ['Lx','Gx','Ly','Gy'].forEach(function(id){document.getElementById(id).value='';});
+      build();
+    },
     apply:function(d,scroll){
       if(d.Lx!=null)document.getElementById('Lx').value=d.Lx;
       if(d.Ly!=null)document.getElementById('Ly').value=d.Ly;
@@ -1044,7 +1051,17 @@ canvas{display:block;max-width:100%;cursor:crosshair}
     if(ok&&mmpp)readDims();
   };
   document.getElementById('clearImg').onclick=function(){
-    img=null;stage.style.display='none';drop.style.display='block';
+    // 画像だけでなく、その画像から読み取った内部状態も丸ごと消す。
+    // 以前は img=null にするだけで、格子・縮尺・OCR結果・手動指定した点などが
+    // 残ったままになっていた。次の図面を貼ったときは load() がこれらを上書きするので
+    // 実害は出にくいが、貼らずに終える場合は計算欄に前の図面の値が残り続けていた
+    img=null; view=1; mode='rect'; mmpp=null; gridPx=null;
+    geo={rect:null,cg:null,mx:[],my:[]}; drag=null; calib=[];
+    fullData=null; ocrRes=null; lastApplied=null;
+    enh=null; enhMild=null; SUP=1; fitA=null; fitB=0; gridFit=null; cgInfo=null;
+    stage.style.display='none'; drop.style.display='block';
+    document.getElementById('ocrBox').innerHTML='';
+    window.MIRAIE.clear();
   };
 
   // 読み取り結果と割り当てから、計算欄に値を流し込む
