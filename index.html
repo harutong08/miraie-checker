@@ -1418,19 +1418,20 @@ canvas{display:block;max-width:100%;cursor:crosshair}
     ['x','y'].forEach(function(ax){
       var arr=ocrRes[ax]; if(!arr||!arr.length)return;
       arr.forEach(function(d){ d.isCg=false; d.red=null; });
+      // 重心寸法Gは「内側2」（arr[1]）に描かれる、という図面の描き方の慣習に従い、
+      // 位置で固定する。赤い印からの幾何学的な特定（bestD<=4px）は低解像度の画像だと
+      // 数mm〜数cmずれて別の行を誤ってGと判定することがあるため、判定そのものには使わない。
+      // ここでは赤い印とグリッドから求めた実測値(d.red)だけを、その固定行の裏付け・
+      // フォールバック用に計算する
+      var gi=arr.length>1?1:0;
+      arr[gi].isCg=true;
       var im=arr[0].imgAxis||ax;
       if(!geo.cg||!gridFit||!gridFit[im])return;
       var c=(im==='x')?geo.cg.x:geo.cg.y;
-      var bestI=-1,bestD=1e9;
-      arr.forEach(function(d,i){
-        var dd=Math.min(Math.abs(d.b-c),Math.abs(d.a-c));
-        if(dd<bestD){bestD=dd;bestI=i;}
-      });
-      if(bestI<0||bestD>4)return;
-      var d0=arr[bestI], origin=(Math.abs(d0.b-c)<Math.abs(d0.a-c))?d0.a:d0.b;
+      var d0=arr[gi], origin=(Math.abs(d0.b-c)<Math.abs(d0.a-c))?d0.a:d0.b;
       var v=idxRaw(c,origin,im);
       if(v===null)return;
-      d0.isCg=true; d0.red=Math.round(Math.abs(v)*100)/100;
+      d0.red=Math.round(Math.abs(v)*100)/100;
     });
   }
   // 格子番号の差（丸めなし）。重心は格子に乗らないのでスナップしない
@@ -1466,20 +1467,18 @@ canvas{display:block;max-width:100%;cursor:crosshair}
     await worker.setParameters({tessedit_char_whitelist:'0123456789,.',tessedit_pageseg_mode:'7'});
 
     // 重心の行はOCRより先に赤い印から高精度な値が分かっているので、
-    // その行を先に特定して読み取りの参照値として使う（誤読との判別に効く）
+    // その行を先に特定して読み取りの参照値として使う（誤読との判別に効く）。
+    // 重心寸法Gは「内側2」に描かれる、という図面の慣習に従って行を固定する
+    // （markCentroidRows()と同じ考え方。赤い印の幾何学的な一致だけで探すと、
+    // 低解像度画像では数mm〜数cmずれて別の行を誤って選んでしまうことがある）
     function findRedRef(lines,vertical){
-      if(!geo.cg||!gridFit)return null;
+      if(!geo.cg||!gridFit||!lines.length)return null;
+      var gi=lines.length>1?1:0;
       // 縦の寸法線は縦方向に伸びるので、比べるのは重心のy座標・使う格子もy軸
       var im=vertical?'y':'x', c=(im==='x')?geo.cg.x:geo.cg.y;
-      var bestI=-1,bestD=1e9;
-      lines.forEach(function(L,i){
-        var dd=Math.min(Math.abs(L.b-c),Math.abs(L.a-c));
-        if(dd<bestD){bestD=dd;bestI=i;}
-      });
-      if(bestI<0||bestD>4)return null;
-      var L0=lines[bestI], origin=(Math.abs(L0.b-c)<Math.abs(L0.a-c))?L0.a:L0.b;
+      var L0=lines[gi], origin=(Math.abs(L0.b-c)<Math.abs(L0.a-c))?L0.a:L0.b;
       var v=idxRaw(c,origin,im);
-      return (v===null)?null:{i:bestI,ref:Math.round(Math.abs(v)*100)/100};
+      return (v===null)?null:{i:gi,ref:Math.round(Math.abs(v)*100)/100};
     }
     var redX=findRedRef(ord.v,true), redY=findRedRef(ord.h,false);
 
@@ -1736,22 +1735,10 @@ canvas{display:block;max-width:100%;cursor:crosshair}
           +'</div></div>';
       });
       var n=window.MIRAIE.getN(), k;
-      // 重心寸法Gの行は「内側2固定」と決め打ちせず、markCentroidRows()が赤い印から
-      // 特定した行(isCg)を優先して使う。それが取れない場合だけ、重心は格子に乗らず
-      // 小数になりやすいという性質を頼りに、小数点を含む値をGとみなす。
-      // 決め打ちのままだと、Gが実際には内側2以外の行にある図面でミライエ側の
-      // 割り当て候補(avail)が1行減り、ミライエの数が足りなくなる原因になっていた
-      var lSel=0, gSel=-1, avail=[], ai;
-      for(ai=0;ai<arr.length;ai++){ if(arr[ai].isCg){ gSel=ai; break; } }
-      if(gSel<0){
-        for(ai=0;ai<arr.length;ai++){
-          if(ai!==lSel&&Math.abs(arr[ai].value%1)>1e-6){ gSel=ai; break; }
-        }
-      }
-      if(gSel<0)gSel=Math.min(1,arr.length-1);
-      if(gSel===lSel&&arr.length>1){
-        for(ai=0;ai<arr.length;ai++){ if(ai!==lSel){ gSel=ai; break; } }
-      }
+      // 重心寸法Gの行は「内側2」（arr[1]）に固定。markCentroidRows()が同じ行に
+      // isCg=trueを立てているので、値そのものは小数点を含む読み取り（図面の数字）を
+      // 優先するようrefineLattice()側で処理される
+      var lSel=0, gSel=Math.min(1,arr.length-1), avail=[], ai;
       h+='<div class="oassign">'
         +'<div><label>建物寸法 L</label><select data-role="L" data-ax="'+ax+'">'+opts(arr,0)+'</select></div>'
         +'<div><label>重心寸法 G</label><select data-role="G" data-ax="'+ax+'">'+opts(arr,gSel)+'</select></div>';
