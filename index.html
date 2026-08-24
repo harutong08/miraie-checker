@@ -177,8 +177,6 @@ canvas{display:block;max-width:100%;cursor:crosshair}
 .b-meas{background:var(--ng-bg);color:var(--ng)}
 .b-latdiff{background:var(--ng-bg);color:var(--ng)}
 .b-ocrcg{background:var(--blue-bg);color:var(--blue)}
-.b-redok{background:var(--ok-bg);color:var(--ok)}
-.b-red{background:#FAEBEA;color:#A8332C}
 .b-mono{background:var(--ng-bg);color:var(--ng)}
 .diag{margin-top:14px;border-top:1px solid var(--rule-soft);padding-top:12px}
 .diag pre{font-family:var(--mono);font-size:11px;line-height:1.7;color:var(--muted);
@@ -1415,26 +1413,17 @@ canvas{display:block;max-width:100%;cursor:crosshair}
     return ord;
   }
 
-  // 端点が赤い印に重なる寸法線を重心寸法として印を付け、赤い印からの実測値を添える
+  // 「内側2」の行に重心寸法の印を付ける（値は図面の数字だけで決める。詳細は関数内コメント）
   function markCentroidRows(){
     if(!ocrRes)return;
     ['x','y'].forEach(function(ax){
       var arr=ocrRes[ax]; if(!arr||!arr.length)return;
-      arr.forEach(function(d){ d.isCg=false; d.red=null; });
+      arr.forEach(function(d){ d.isCg=false; });
       // 重心寸法Gは「内側2」（arr[1]）に描かれる、という図面の描き方の慣習に従い、
-      // 位置で固定する。赤い印からの幾何学的な特定（bestD<=4px）は低解像度の画像だと
-      // 数mm〜数cmずれて別の行を誤ってGと判定することがあるため、判定そのものには使わない。
-      // ここでは赤い印とグリッドから求めた実測値(d.red)だけを、その固定行の裏付け・
-      // フォールバック用に計算する
+      // 位置で固定する。値は図面の数字（OCR）だけで決める。赤い印は低解像度の画像だと
+      // 数mm〜数cmずれることがあり（既知の問題3）、行の判定にも値の算出にも使わない
       var gi=arr.length>1?1:0;
       arr[gi].isCg=true;
-      var im=arr[0].imgAxis||ax;
-      if(!geo.cg||!gridFit||!gridFit[im])return;
-      var c=(im==='x')?geo.cg.x:geo.cg.y;
-      var d0=arr[gi], origin=(Math.abs(d0.b-c)<Math.abs(d0.a-c))?d0.a:d0.b;
-      var v=idxRaw(c,origin,im);
-      if(v===null)return;
-      d0.red=Math.round(Math.abs(v)*100)/100;
     });
   }
   // 格子番号の差（丸めなし）。重心は格子に乗らないのでスナップしない
@@ -1469,24 +1458,14 @@ canvas{display:block;max-width:100%;cursor:crosshair}
     var worker=await Tesseract.createWorker('eng');
     await worker.setParameters({tessedit_char_whitelist:'0123456789,.',tessedit_pageseg_mode:'7'});
 
-    // 重心の行はOCRより先に赤い印から高精度な値が分かっているので、
-    // その行を先に特定して読み取りの参照値として使う（誤読との判別に効く）。
     // 重心寸法Gは「内側2」に描かれる、という図面の慣習に従って行を固定する
-    // （markCentroidRows()と同じ考え方。赤い印の幾何学的な一致だけで探すと、
-    // 低解像度画像では数mm〜数cmずれて別の行を誤って選んでしまうことがある）
-    function findRedRef(lines,vertical){
-      if(!geo.cg||!gridFit||!lines.length)return null;
-      var gi=lines.length>1?1:0;
-      // 縦の寸法線は縦方向に伸びるので、比べるのは重心のy座標・使う格子もy軸
-      var im=vertical?'y':'x', c=(im==='x')?geo.cg.x:geo.cg.y;
-      var L0=lines[gi], origin=(Math.abs(L0.b-c)<Math.abs(L0.a-c))?L0.a:L0.b;
-      var v=idxRaw(c,origin,im);
-      return (v===null)?null:{i:gi,ref:Math.round(Math.abs(v)*100)/100};
-    }
-    var redX=findRedRef(ord.v,true), redY=findRedRef(ord.h,false);
+    // （markCentroidRows()と同じ考え方）。赤い印は使わず、この行番号だけを
+    // scan()に伝えて、小数点の桁ずれ候補（allowShift）を有効にする
+    function cgIndex(lines){ return lines.length>1?1:0; }
+    var cgX=cgIndex(ord.v), cgY=cgIndex(ord.h);
 
     // 1回目：候補を集めるだけ。縮尺の当てにならない値で候補を絞らない
-    async function scan(L,vertical,redRef,neighbors){
+    async function scan(L,vertical,isCg,neighbors){
       var b = findLabelBand(L,vertical,null,neighbors) ||
               (vertical ? {x0:L.p-17,y0:L.a,x1:L.p-1,y1:L.b}
                         : {x0:L.a,y0:L.p-16,x1:L.b,y1:L.p-2});
@@ -1522,7 +1501,7 @@ canvas{display:block;max-width:100%;cursor:crosshair}
         // 格子上の寸法は最終的に格子の値を採用するため、これ以上読み比べる必要がない
         if(total>=2&&v!==null&&onLattice(v)&&cands[v]>=2)break;
       }
-      return {cands:cands,total:total,imgAxis:vertical?'y':'x',redRef:redRef,
+      return {cands:cands,total:total,imgAxis:vertical?'y':'x',isCg:!!isCg,
               pos:L.p,a:L.a,b:L.b,span:L.span};
     }
 
@@ -1534,8 +1513,8 @@ canvas{display:block;max-width:100%;cursor:crosshair}
     }
     var rawX=[], rawY=[];
     var nbX=ord.v.map(function(L){return L.p;}), nbY=ord.h.map(function(L){return L.p;});
-    for(i=0;i<ord.v.length;i++){rawX.push(await scan(ord.v[i],true,(redX&&redX.i===i)?redX.ref:null,nbX));prog();}
-    for(j=0;j<ord.h.length;j++){rawY.push(await scan(ord.h[j],false,(redY&&redY.i===j)?redY.ref:null,nbY));prog();}
+    for(i=0;i<ord.v.length;i++){rawX.push(await scan(ord.v[i],true,i===cgX,nbX));prog();}
+    for(j=0;j<ord.h.length;j++){rawY.push(await scan(ord.h[j],false,j===cgY,nbY));prog();}
     await worker.terminate();
 
     // 2回目：読み取れた数字から縮尺そのものを割り出す
@@ -1562,7 +1541,7 @@ canvas{display:block;max-width:100%;cursor:crosshair}
       // 桁ずらしを試すのは重心の行だけ。重心は小数付きの値になるため小数点が
       // 読み落とされやすい一方、他の行は格子に乗る整数値なので桁ずらしは不要で、
       // むしろ誤った候補を増やすリスクになる
-      var shiftPenalty={}, allowShift=(d.redRef!=null);
+      var shiftPenalty={}, allowShift=d.isCg;
       Object.keys(d.cands).forEach(function(key){
         var v=parseFloat(key), n=d.cands[key];
         var variants=allowShift?[[v,0],[v/10,25],[v/100,35],[v*10,30]]:[[v,0]];
@@ -1578,22 +1557,6 @@ canvas{display:block;max-width:100%;cursor:crosshair}
       });
       var keys=Object.keys(votes).map(parseFloat);
       var ref=d.span*useMM;
-
-      // 重心行では、赤い印から物理的に測った値（誤差数mm）と明らかに矛盾する候補を除外する。
-      // 全候補が矛盾する場合は読み取り失敗とみなし、赤い印の実測値そのものを採用する
-      if(d.redRef!=null&&keys.length){
-        ref=d.redRef;
-        var keep=keys.filter(function(v){
-          return Math.abs(v-d.redRef)<Math.max(200,d.redRef*0.05);
-        });
-        if(keep.length){ keys=keep; }
-        else {
-          d.cands=keys.slice(0,5); d.votes=0; d.total=tot;
-          d.ocr=null; d.value=d.redRef; d.ok=false; d.src='red';
-          d.geo=d.span*useMM;
-          return d;
-        }
-      }
       function sc(v){ return Math.abs(v-ref)-40*(votes[v]-1)+(shiftPenalty[v]||0); }
       keys.sort(function(a,b){return sc(a)-sc(b);});
       var best=keys.length?keys[0]:null;
@@ -1655,15 +1618,11 @@ canvas{display:block;max-width:100%;cursor:crosshair}
         d.lat=latticeMM(d.span,d.imgAxis||ax);
 
         if(d.isCg){
-          // 重心は格子に乗らないので、図面の数字が読めていればそれが最も正確。
-          // 赤い印からの推定は低解像度画像では数mm〜数cmずれることがあるので、
-          // 数字が読めた場合は赤い印との距離に関わらず数字を採用する
-          // （赤い印との一致・不一致はバッジで知らせるだけにとどめる）。
-          // 数字が読めない場合だけ、代替として赤い印からの推定値を使う
+          // 重心は格子に乗らないので、図面の数字（OCR）だけで決める。赤い印は
+          // 低解像度画像では数mm〜数cmずれることがあるため使わない（既知の問題3）。
+          // 数字が読めない場合だけ、寸法線の長さから推定した値を代替として使う
           if(d.ok&&d.ocr!=null){
-            d.value=d.ocr; d.src=(d.red!=null&&Math.abs(d.ocr-d.red)<114)?'redok':'ocr';
-          } else if(d.red!=null){
-            d.value=d.red; d.src='red';
+            d.value=d.ocr; d.src='ocr';
           } else {
             d.value=Math.round(measMM(d.span)); d.src='meas';
           }
@@ -1730,9 +1689,8 @@ canvas{display:block;max-width:100%;cursor:crosshair}
         h+='<div class="orow"><span class="orank">'+(i===0?'内側 1':'外側 '+(i+1))+'</span><div class="oval">'
           +'<input type="number" step="0.01" data-ax="'+ax+'" data-i="'+i+'" value="'+d.value+'">'
           +'<span class="omeas'+((d.ok&&Math.abs(d.geo-d.value)>Math.max(200,d.value*0.05))?' obad':'')+'">'
-            +(d.red!=null? '赤い印から '+d.red.toLocaleString('ja-JP')+' mm'
-                         : '実測 '+Math.round(d.geo!=null?d.geo:measMM(d.span)).toLocaleString('ja-JP')+' mm')+'</span>'
-          +'<span class="badge b-'+(d.src||'meas')+'">'+({lattice:'図面の数字（格子と一致）',latfix:'図面の数字（格子と不一致）',ocr:'図面の数字'+(d.votes>=d.total*0.9?'（読み取り一致）':''),ocrcg:'図面の数字（重心）',redok:'図面の数字（赤い印と一致）',red:'赤い印から算出',latonly:'格子から推定',latguard:'格子から推定（弱い読み取りのため）',meas:'実測値'}[d.src||'meas'])+'</span>'
+            +'実測 '+Math.round(d.geo!=null?d.geo:measMM(d.span)).toLocaleString('ja-JP')+' mm</span>'
+          +'<span class="badge b-'+(d.src||'meas')+'">'+({lattice:'図面の数字（格子と一致）',latfix:'図面の数字（格子と不一致）',ocr:'図面の数字'+(d.votes>=d.total*0.9?'（読み取り一致）':''),latonly:'格子から推定',latguard:'格子から推定（弱い読み取りのため）',meas:'実測値'}[d.src||'meas'])+'</span>'
           +(d.ocr!=null&&Math.abs(d.ocr-d.value)>0.5?'<span class="omeas obad">数字は '+d.ocr.toLocaleString('ja-JP')+'</span>':'')
           +d.cands.map(function(c){return '<button class="chip" type="button" data-ax="'+ax+'" data-i="'+i+'" data-v="'+c+'">'+c.toLocaleString('ja-JP')+'</button>';}).join('')
           +'</div></div>';
@@ -1804,7 +1762,6 @@ canvas{display:block;max-width:100%;cursor:crosshair}
       arr.forEach(function(d,i){
         t.push('  '+(i+1)+') 位置'+f(d.pos)+' 幅'+f(d.span)
           +' 格子値'+f(d.lat)+' 実測'+f(d.geo)
-          +(d.red!=null?' 赤い印'+f(d.red):'')
           +' → 採用'+f(d.value)+' ['+(d.src||'-')+']'
           +'  候補'+JSON.stringify(d.cands)+' 票'+d.votes+'/'+d.total);
       });
