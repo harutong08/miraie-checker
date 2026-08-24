@@ -1656,14 +1656,14 @@ canvas{display:block;max-width:100%;cursor:crosshair}
 
         if(d.isCg){
           // 重心は格子に乗らないので、図面の数字が読めていればそれが最も正確。
-          // 赤い印からの推定は数十mmずれることがあるため、数字が読めない場合の
-          // 代替として使う（両者が近ければ数字を採ってよいと分かる）
-          if(d.ok&&d.ocr!=null&&(d.red==null||Math.abs(d.ocr-d.red)<114)){
-            d.value=d.ocr; d.src=(d.red!=null)?'redok':'ocr';
+          // 赤い印からの推定は低解像度画像では数mm〜数cmずれることがあるので、
+          // 数字が読めた場合は赤い印との距離に関わらず数字を採用する
+          // （赤い印との一致・不一致はバッジで知らせるだけにとどめる）。
+          // 数字が読めない場合だけ、代替として赤い印からの推定値を使う
+          if(d.ok&&d.ocr!=null){
+            d.value=d.ocr; d.src=(d.red!=null&&Math.abs(d.ocr-d.red)<114)?'redok':'ocr';
           } else if(d.red!=null){
             d.value=d.red; d.src='red';
-          } else if(d.ok&&d.ocr!=null){
-            d.value=d.ocr; d.src='ocr';
           } else {
             d.value=Math.round(measMM(d.span)); d.src='meas';
           }
