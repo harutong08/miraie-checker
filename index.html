@@ -1736,13 +1736,28 @@ canvas{display:block;max-width:100%;cursor:crosshair}
           +'</div></div>';
       });
       var n=window.MIRAIE.getN(), k;
+      // 重心寸法Gの行は「内側2固定」と決め打ちせず、markCentroidRows()が赤い印から
+      // 特定した行(isCg)を優先して使う。それが取れない場合だけ、重心は格子に乗らず
+      // 小数になりやすいという性質を頼りに、小数点を含む値をGとみなす。
+      // 決め打ちのままだと、Gが実際には内側2以外の行にある図面でミライエ側の
+      // 割り当て候補(avail)が1行減り、ミライエの数が足りなくなる原因になっていた
+      var lSel=0, gSel=-1, avail=[], ai;
+      for(ai=0;ai<arr.length;ai++){ if(arr[ai].isCg){ gSel=ai; break; } }
+      if(gSel<0){
+        for(ai=0;ai<arr.length;ai++){
+          if(ai!==lSel&&Math.abs(arr[ai].value%1)>1e-6){ gSel=ai; break; }
+        }
+      }
+      if(gSel<0)gSel=Math.min(1,arr.length-1);
+      if(gSel===lSel&&arr.length>1){
+        for(ai=0;ai<arr.length;ai++){ if(ai!==lSel){ gSel=ai; break; } }
+      }
       h+='<div class="oassign">'
         +'<div><label>建物寸法 L</label><select data-role="L" data-ax="'+ax+'">'+opts(arr,0)+'</select></div>'
-        +'<div><label>重心寸法 G</label><select data-role="G" data-ax="'+ax+'">'+opts(arr,Math.min(1,arr.length-1))+'</select></div>';
+        +'<div><label>重心寸法 G</label><select data-role="G" data-ax="'+ax+'">'+opts(arr,gSel)+'</select></div>';
       // ミライエに割り当てる行は、建物寸法(内側1)と重心を除いた残り。
       // 行数が足りない場合でも、余っている行から順に埋める
       // （以前は該当行がないと何も選ばれず「クリックで指定」に落ちて値が入らなかった）
-      var lSel=0, gSel=Math.min(1,arr.length-1), avail=[], ai;
       for(ai=0;ai<arr.length;ai++){ if(ai!==lSel&&ai!==gSel)avail.push(ai); }
       for(k=0;k<n;k++){
         var pickIdx=(k<avail.length)?avail[k]:-1;
