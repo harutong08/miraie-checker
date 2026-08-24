@@ -1,0 +1,15 @@
+{
+  "name": "ミライエ設置位置計算",
+  "short_name": "ミライエ判定",
+  "description": "図面画像から寸法をOCR読み取りし、制震壁（ミライエ）の配置基準を判定するツール",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F4F6F5",
+  "theme_color": "#1B2430",
+  "lang": "ja",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

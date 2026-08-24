@@ -1,0 +1,1998 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ミライエ設置位置計算</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1B2430">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F6F5; --card:#FFFFFF; --ink:#1B2430; --muted:#6C7783;
+  --rule:#DFE4E2; --rule-soft:#EDF0EF;
+  --blue:#2F5C8A; --blue-bg:#EAF0F6; --blue-soft:#F4F8FB;
+  --ok:#1C6E52; --ok-bg:#E7F2ED;
+  --ng:#A8332C; --ng-bg:#FAEBEA;
+  --sans:"Noto Sans JP",system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1020px;margin:0 auto;padding:32px 20px 64px}
+
+.head{border-bottom:1px solid var(--rule);padding-bottom:20px;margin-bottom:24px}
+.eyebrow{font-size:12px;letter-spacing:.14em;color:var(--muted);margin:0 0 6px}
+h1{font-size:26px;font-weight:500;margin:0 0 12px;letter-spacing:.02em}
+.formula{display:inline-block;font-family:var(--mono);font-size:14px;background:var(--blue-bg);color:var(--blue);padding:7px 14px;border-radius:4px}
+
+.card{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:22px 24px;margin-bottom:16px}
+.card > h2{font-size:15px;font-weight:500;margin:0 0 18px;padding-bottom:10px;border-bottom:1px solid var(--rule-soft);display:flex;align-items:center;gap:10px}
+.tag{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--blue);background:var(--blue-bg);padding:2px 8px;border-radius:3px;letter-spacing:.06em}
+
+.grid{display:grid;gap:14px 18px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px}
+.u{font-family:var(--mono);font-size:11px;color:#9AA3AC;margin-left:4px}
+input[type=number],select{width:100%;height:40px;padding:0 11px;font-family:var(--mono);font-size:15px;color:var(--ink);background:#FCFDFC;border:1px solid var(--rule);border-radius:5px;transition:border-color .12s,box-shadow .12s}
+select{font-family:var(--sans);font-size:14px;padding-right:8px}
+input[type=number]:hover,select:hover{border-color:#C3CBC7}
+input[type=number]:focus,select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(47,92,138,.12)}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield}
+
+.btn{height:36px;padding:0 16px;font-family:var(--sans);font-size:13px;color:var(--blue);background:var(--blue-soft);border:1px solid #CFDDE9;border-radius:5px;cursor:pointer;transition:background .12s,border-color .12s}
+.btn:hover{background:var(--blue-bg);border-color:var(--blue)}
+.btn:active{transform:scale(.985)}
+.btn:disabled{color:#A9B2B9;background:#F4F6F5;border-color:var(--rule);cursor:default;transform:none}
+.btn-sm{height:28px;padding:0 11px;font-size:12px}
+
+.guide{margin-top:18px;background:var(--blue-bg);border-radius:6px;padding:13px 16px;display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.guide-t{font-size:13px;color:var(--blue)}
+.guide-n{font-family:var(--mono);font-size:20px;font-weight:500;color:var(--blue);white-space:nowrap}
+.guide-n small{font-family:var(--sans);font-size:12px;font-weight:400;margin-left:3px}
+
+.split{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:860px){.split{grid-template-columns:1fr}}
+.axis{width:22px;height:22px;border-radius:3px;flex:none;background:var(--ink);color:#fff;font-family:var(--mono);font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center}
+.sub{font-size:12px;color:var(--muted);margin:20px 0 10px;padding-top:14px;border-top:1px dashed var(--rule);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+.verdict{margin-top:18px;border-radius:6px;padding:14px 16px}
+.v-idle{background:#F4F6F5;color:var(--muted);font-size:13px}
+.v-ok{background:var(--ok-bg)} .v-ng{background:var(--ng-bg)}
+.v-mark{font-size:19px;font-weight:500;letter-spacing:.04em;display:block;margin-bottom:6px}
+.v-ok .v-mark{color:var(--ok)} .v-ng .v-mark{color:var(--ng)}
+.v-eq{display:grid;grid-template-columns:max-content 16px 1fr;column-gap:8px;row-gap:3px;
+       align-items:baseline;font-family:var(--mono);font-size:13px}
+.ve-l{text-align:right;white-space:nowrap}
+.ve-o{text-align:center}
+.v-ok .v-eq{color:var(--ok)} .v-ng .v-eq{color:var(--ng)}
+
+.ref{font-size:12.5px;color:var(--muted);line-height:2;margin:10px 0 0}
+.ref b{font-family:var(--mono);font-weight:500;color:var(--ink)}
+
+.cand{margin-top:16px;border-top:1px solid var(--rule-soft);padding-top:14px}
+.cand-h{font-size:12.5px;color:var(--muted);margin:0 0 10px}
+.c-row{border:1px solid var(--rule);border-radius:6px;padding:10px 12px;margin-bottom:8px;background:#FCFDFC}
+.c-row.best{border-color:var(--blue);background:var(--blue-soft)}
+.c-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.c-rank{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.06em}
+.c-row.best .c-rank{color:var(--blue)}
+.c-diff{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--ok)}
+.c-pos{font-family:var(--mono);font-size:12.5px;color:var(--ink);word-break:break-all;margin-bottom:9px}
+.bar{position:relative;height:16px;background:#EFF2F1;border-radius:3px;margin-bottom:9px}
+.bar i{position:absolute;top:2px;width:3px;height:12px;background:var(--blue);border-radius:1px;transform:translateX(-50%)}
+.bar u{position:absolute;top:-2px;width:1px;height:20px;background:var(--ng);opacity:.75}
+.c-act{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.c-note{font-size:11.5px;color:var(--muted)}
+
+details{border-top:1px solid var(--rule-soft);margin-top:18px;padding-top:14px}
+summary{cursor:pointer;font-size:13px;color:var(--blue);list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"＋ ";font-family:var(--mono)}
+details[open] summary::before{content:"− "}
+table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--rule-soft);text-align:left}
+th{font-weight:500;font-size:11.5px;color:var(--muted);letter-spacing:.04em}
+td:not(:first-child),th:not(:first-child){font-family:var(--mono);text-align:right;width:22%}
+caption{caption-side:top;text-align:left;font-size:12.5px;color:var(--ink);padding:14px 0 2px}
+.foot{font-size:12px;color:var(--muted);margin-top:24px;line-height:1.9}
+
+.save-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.save-bar>div{flex:1 1 200px;min-width:170px}
+.hist{margin-top:16px;border-top:1px solid var(--rule-soft);padding-top:14px}
+.hist-empty{font-size:12.5px;color:var(--muted)}
+.hrow{display:grid;grid-template-columns:1fr max-content;gap:10px;align-items:center;
+      padding:9px 11px;border:1px solid var(--rule);border-radius:6px;margin-bottom:7px;background:#FCFDFC}
+.hrow:hover{border-color:var(--blue);background:var(--blue-soft)}
+.hname{font-size:13.5px;font-weight:500}
+.hmeta{font-size:11.5px;color:var(--muted);font-family:var(--mono);margin-top:2px}
+.hres{font-family:var(--mono);font-size:12px;margin-left:8px}
+.hres.ok{color:var(--ok)} .hres.ng{color:var(--ng)}
+.hbtns{display:flex;gap:6px}
+
+.w-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:860px){.w-grid{grid-template-columns:1fr}}
+.w-blk{border:1px solid var(--rule-soft);border-radius:6px;padding:14px 16px;background:#FCFDFC}
+.w-ttl{font-size:12.5px;color:var(--muted);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.eq3{grid-template-columns:max-content 16px 1fr !important}
+.eq3 .eq-l{white-space:normal}
+.eq{display:grid;grid-template-columns:22px max-content 14px 1fr;
+     column-gap:8px;row-gap:3px;align-items:baseline;font-family:var(--mono);font-size:13px}
+.eq-no{color:#A9B2B9;font-size:11px}
+.eq-l{text-align:right;color:var(--blue);white-space:nowrap}
+.eq-op{text-align:center;color:var(--muted)}
+.eq-r{color:var(--ink);word-break:break-word}
+.eq-r em{font-style:normal;font-weight:500}
+.eq-cap{grid-column:1 / -1;font-family:var(--sans);font-size:11.5px;color:var(--muted);
+        margin-top:9px;padding-top:7px;border-top:1px dashed var(--rule-soft)}
+.eq-cap:first-child{margin-top:0;padding-top:0;border-top:0}
+.eq-ok{color:var(--ok);font-weight:500}
+.eq-ng{color:var(--ng);font-weight:500}
+.w-empty{font-size:13px;color:var(--muted)}
+
+.drop{border:1.5px dashed #C6D0D8;border-radius:8px;background:var(--blue-soft);padding:36px 20px;text-align:center;cursor:pointer;transition:border-color .12s,background .12s}
+.drop:hover,.drop.over{border-color:var(--blue);background:var(--blue-bg)}
+.drop p{margin:0;font-size:13.5px;color:var(--blue)}
+.drop small{display:block;margin-top:6px;font-size:12px;color:var(--muted)}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.tools .sep{width:1px;height:22px;background:var(--rule)}
+.btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.cvwrap{border:1px solid var(--rule);border-radius:6px;overflow:hidden;background:#fff;line-height:0}
+canvas{display:block;max-width:100%;cursor:crosshair}
+.status{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+.st{background:#F7F9F8;border-radius:5px;padding:9px 12px}
+.st b{display:block;font-family:var(--mono);font-size:14px;font-weight:500;color:var(--ink);margin-top:1px}
+.st span{font-size:11.5px;color:var(--muted)}
+.st.warn b{color:var(--ng)}
+.hint{font-size:12px;color:var(--muted);margin:12px 0 0;line-height:1.9}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);cursor:pointer;user-select:none}
+.chk input{width:15px;height:15px;accent-color:var(--blue);cursor:pointer}
+.ocr{margin-top:14px;border:1px solid var(--rule);border-radius:6px;padding:14px 16px;background:#FCFDFC}
+.ocr h3{font-size:13px;font-weight:500;margin:0 0 10px;color:var(--ink)}
+.ocr h4{font-size:12px;font-weight:400;color:var(--muted);margin:14px 0 8px}
+.orow{display:grid;grid-template-columns:74px 1fr;gap:10px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--rule-soft)}
+.orow:last-child{border-bottom:0}
+.orank{font-size:11.5px;color:var(--muted)}
+.oval{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.oval input{width:120px;height:32px}
+.omeas{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.chip{font-family:var(--mono);font-size:11.5px;padding:2px 8px;border-radius:11px;border:1px solid var(--rule);background:#fff;color:var(--blue);cursor:pointer}
+.chip:hover{border-color:var(--blue);background:var(--blue-bg)}
+.obad{color:var(--ng)}
+.badge{font-size:11px;padding:2px 8px;border-radius:11px;white-space:nowrap}
+.b-lattice{background:var(--ok-bg);color:var(--ok)}
+.b-ocr{background:var(--blue-bg);color:var(--blue)}
+.b-latonly{background:#FBF3E4;color:#8A6417}
+.b-latguard{background:#FBF3E4;color:#8A6417}
+.b-latfix{background:var(--blue-bg);color:var(--blue)}
+.b-lattice{background:var(--ok-bg);color:var(--ok)}
+.b-meas{background:var(--ng-bg);color:var(--ng)}
+.b-latdiff{background:var(--ng-bg);color:var(--ng)}
+.b-ocrcg{background:var(--blue-bg);color:var(--blue)}
+.b-redok{background:var(--ok-bg);color:var(--ok)}
+.b-red{background:#FAEBEA;color:#A8332C}
+.b-mono{background:var(--ng-bg);color:var(--ng)}
+.diag{margin-top:14px;border-top:1px solid var(--rule-soft);padding-top:12px}
+.diag pre{font-family:var(--mono);font-size:11px;line-height:1.7;color:var(--muted);
+  background:#F7F9F8;border-radius:5px;padding:10px 12px;overflow-x:auto;margin:8px 0 0;white-space:pre}
+.oassign{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:10px}
+.oassign select{height:34px}
+
+@media print{body{background:#fff}.wrap{padding:0;max-width:none}.card{break-inside:avoid;border-color:#ccc}details,.btn{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="head">
+    <p class="eyebrow">制震壁 MIRAIE ／ 配置方法2</p>
+    <h1>ミライエ設置位置計算</h1>
+    <span class="formula">|(M1 + M2 + … + Mn) − (G × n)| ≦ L / 3</span>
+  </header>
+
+  <section class="card">
+    <h2>検討の保存<span class="tag">履歴</span></h2>
+    <div class="save-bar">
+      <div>
+        <label for="recName">案件名</label>
+        <input type="text" id="recName" placeholder="例：〇〇様邸 1階" style="width:100%;height:40px;padding:0 11px;font-family:var(--sans);font-size:14px;background:#FCFDFC;border:1px solid var(--rule);border-radius:5px">
+      </div>
+      <div style="flex:0 0 auto;display:flex;gap:8px">
+        <button class="btn" id="recSave" type="button">この内容を保存</button>
+        <button class="btn btn-sm" id="recExport" type="button">書き出し</button>
+        <button class="btn btn-sm" id="recImport" type="button">読み込み</button>
+      </div>
+    </div>
+    <div class="hist" id="histBox"></div>
+  </section>
+
+  <section class="card">
+    <h2>建物条件<span class="tag">配置箇所数の目安</span></h2>
+    <div class="grid g4">
+      <div><label for="area">延べ面積<span class="u">㎡</span></label><input type="number" id="area" min="0" step="0.01"></div>
+      <div>
+        <label for="snow">積雪区分</label>
+        <select id="snow">
+          <option value="70">一般（積雪量 0cm以上 100cm未満）</option>
+          <option value="55">多雪地域（積雪量 100cm以上 150cm未満）</option>
+          <option value="50">多雪地域（積雪量 150cm以上）</option>
+        </select>
+      </div>
+      <div><label for="n">設置数 n<span class="u">一方向</span></label><select id="n"></select></div>
+      <div><label for="mod">モジュール<span class="u">mm</span></label><input type="number" id="mod" value="910" step="1" min="1"></div>
+    </div>
+    <div class="guide">
+      <span class="guide-t" id="guide-t">延べ面積を入力すると目安の箇所数を表示します</span>
+      <span class="guide-n" id="guide-n">2<small>箇所 × 2方向 = 4箇所</small></span>
+    </div>
+
+    <details>
+      <summary>配置箇所数の目安表を見る</summary>
+      <table>
+        <caption>一般　積雪量 0cm以上 100cm未満</caption>
+        <tr><th>延べ面積(㎡)</th><th>X方向</th><th>Y方向</th><th>計</th></tr>
+        <tr><td>～140</td><td>2</td><td>2</td><td>4</td></tr>
+        <tr><td>～210</td><td>3</td><td>3</td><td>6</td></tr>
+        <tr><td>～280</td><td>4</td><td>4</td><td>8</td></tr>
+        <tr><td>～70×A</td><td>A</td><td>A</td><td>2×A</td></tr>
+      </table>
+      <table>
+        <caption>多雪地域　積雪量 100cm以上 150cm未満</caption>
+        <tr><th>延べ面積(㎡)</th><th>X方向</th><th>Y方向</th><th>計</th></tr>
+        <tr><td>～110</td><td>2</td><td>2</td><td>4</td></tr>
+        <tr><td>～55×A</td><td>A</td><td>A</td><td>2×A</td></tr>
+      </table>
+      <table>
+        <caption>多雪地域　積雪量 150cm以上</caption>
+        <tr><th>延べ面積(㎡)</th><th>X方向</th><th>Y方向</th><th>計</th></tr>
+        <tr><td>～100</td><td>2</td><td>2</td><td>4</td></tr>
+        <tr><td>～50×A</td><td>A</td><td>A</td><td>2×A</td></tr>
+      </table>
+      <p class="foot" style="margin-top:14px">建物の形状等の条件により制震効果は変化するため、あくまで目安です。設計者の判断で増減できます。</p>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2>図面から寸法を測る<span class="tag">画像計測</span></h2>
+
+    <div class="drop" id="drop">
+      <p>図面画像をここに貼り付け（Ctrl+V）</p>
+      <small>貼り付けると、鮮明化 → 縮尺・建物範囲・重心・寸法の順で自動処理します</small>
+    </div>
+
+    <div id="stage" style="display:none">
+      <div class="tools">
+        <button class="btn btn-sm" id="mMx" type="button">X方向のM</button>
+        <button class="btn btn-sm" id="mMy" type="button">Y方向のM</button>
+        <span class="sep"></span>
+        <button class="btn btn-sm" id="mRect" type="button">外周を手動指定</button>
+        <button class="btn btn-sm" id="mCg" type="button">重心を手動指定</button>
+        <button class="btn btn-sm" id="calib" type="button">縮尺を2点で指定</button>
+        <button class="btn btn-sm" id="ocrBtn" type="button">再読み取り</button>
+        <button class="btn btn-sm" id="reset" type="button">やり直し</button>
+        <span class="sep"></span>
+        <label class="chk">スナップ
+          <select id="snap" style="height:28px;width:auto;font-size:12px">
+            <option value="1">通り芯（910）</option>
+            <option value="0.5" selected>半モジュール（455）</option>
+            <option value="0.25">1/4モジュール（227.5）</option>
+            <option value="0">なし</option>
+          </select></label>
+      </div>
+
+      <div class="cvwrap"><canvas id="cv"></canvas></div>
+
+      <div class="status">
+        <div class="st" id="stScale"><span>縮尺</span><b>—</b></div>
+        <div class="st" id="stL"><span>建物全長 L（X × Y）</span><b>—</b></div>
+        <div class="st" id="stG"><span>重心 G（X ／ Y）</span><b>—</b></div>
+        <div class="st" id="stM"><span>設置位置 M（X ／ Y）</span><b>—</b></div>
+      </div>
+
+      <p class="hint" id="hint"></p>
+      <div id="ocrBox"></div>
+
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="apply" type="button">入力欄に反映</button>
+        <button class="btn" id="clearImg" type="button">画像を外す</button>
+      </div>
+    </div>
+
+    <p class="hint">
+      画像を読み込むと、まず2段階の鮮明化（2倍拡大＋アンシャープ、計4倍）を行います。次に水色の通り芯グリッドを最小二乗で当てはめて、原点とピッチをサブピクセルで確定させます。寸法線を検出して端点を測り、数字を読み取ったうえで、読み取り値・実測値・格子上の値の3つを突き合わせて確定します。<br>
+      <b>図面に書かれている数字を優先して入力します。</b>読めなかった行だけ、建物寸法とミライエの位置は格子（既定910mmの1/4刻み）から、重心は赤い印から推定した値で穴埋めします。<br>
+      文字の位置は寸法線のそばを走査して自動で見つけるため、線と数字の間に余白がなくても、数字が線の下側にあっても読めます。<br>
+      縮尺は水色グリッドの周期を自己相関で求めます（倍音を除いて基本周期だけを拾うため、線がぼやけていても大きくは外れません）。読み取った数字と画素スパンの比の中央値からも縮尺を割り出すので、グリッドの検出を外しても寸法がずれません。数字の読み取りは階調・拡大率・二値化を変えた複数の見え方で試し、一致するまで見え方を増やします。数字が読めなかった行だけ、モジュール格子（1/4刻み）から推定します。実測値と大きく食い違う行は赤で知らせます。<br>
+      なお、これは画像処理による推定です。強い圧縮やぼけで数字そのものが判読できない画像では誤差が残ります。可能であれば元データに近い、圧縮の少ない画像を使ってください。<br>
+      輪郭強調（シャープ処理）は小さな数字の輪を壊すことがあるため、強調ありと強調なしの両方の見え方で読み、まとめて多数決します。重心のように格子から外れる寸法だけは別扱いで、赤い印の円環部分を最小二乗で円に当てはめて中心を求め、読み取った数字と突き合わせます。グリッドが検出できないときは「縮尺を2点で指定」を使ってください。
+    </p>
+  </section>
+
+  <div class="split">
+    <section class="card">
+      <h2><span class="axis">X</span>X方向</h2>
+      <div class="grid g2">
+        <div><label for="Lx">建物全長 L<span class="u">mm</span></label><input type="number" id="Lx" step="0.1"></div>
+        <div><label for="Gx">重心位置寸法 G<span class="u">mm</span></label><input type="number" id="Gx" step="0.1"></div>
+      </div>
+      <div class="sub"><span>基準線から各設置箇所までの距離</span><button class="btn btn-sm" id="btnx" type="button">推奨位置を計算</button></div>
+      <div class="grid g2" id="Mx"></div>
+      <div class="verdict v-idle" id="Rx">建物全長・重心位置・設置寸法をすべて入力すると判定します</div>
+      <p class="ref" id="refx"></p>
+      <div id="candx"></div>
+    </section>
+
+    <section class="card">
+      <h2><span class="axis">Y</span>Y方向</h2>
+      <div class="grid g2">
+        <div><label for="Ly">建物全長 L<span class="u">mm</span></label><input type="number" id="Ly" step="0.1"></div>
+        <div><label for="Gy">重心位置寸法 G<span class="u">mm</span></label><input type="number" id="Gy" step="0.1"></div>
+      </div>
+      <div class="sub"><span>基準線から各設置箇所までの距離</span><button class="btn btn-sm" id="btny" type="button">推奨位置を計算</button></div>
+      <div class="grid g2" id="My"></div>
+      <div class="verdict v-idle" id="Ry">建物全長・重心位置・設置寸法をすべて入力すると判定します</div>
+      <p class="ref" id="refy"></p>
+      <div id="candy"></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>計算過程<span class="tag">数式</span></h2>
+    <div class="w-blk" id="workN" style="margin-bottom:16px"></div>
+    <div class="w-grid">
+      <div class="w-blk" id="workX"></div>
+      <div class="w-blk" id="workY"></div>
+    </div>
+  </section>
+
+  <p class="foot">
+    推奨位置は、基準線から測ったモジュール通り芯の上で |(M1+…+Mn) − (G×n)| が小さくなる組み合わせを並べたものです。同じ値の組み合わせは、壁どうしの間隔が広いものを上位に表示します。<br>
+    重心および建物重心線は、ミライエ設置階および上層階を考慮した値を使います。<br>
+    出典：ミライエ配置基準 補足資料（2017.06.14）
+  </p>
+</div>
+
+<script>
+(function(){
+  var vals={x:{},y:{}};
+  function num(id){var v=parseFloat(document.getElementById(id).value);return isNaN(v)?null:v;}
+  function fmt(v){return (Math.round(v*10)/10).toLocaleString('ja-JP');}
+
+  var nSel=document.getElementById('n');
+  for(var i=2;i<=10;i++){var o=document.createElement('option');o.value=i;o.textContent=i+' 箇所';nSel.appendChild(o);}
+  nSel.value=2;
+
+  function setGuideCount(){
+    var v=parseInt(nSel.value,10);
+    document.getElementById('guide-n').innerHTML=v+'<small>箇所 × 2方向 = '+(v*2)+'箇所</small>';
+  }
+
+  function suggest(){
+    var a=num('area'), per=parseFloat(document.getElementById('snow').value);
+    var t=document.getElementById('guide-t');
+    if(a===null||a<=0){
+      t.textContent='延べ面積を入力すると目安の箇所数を表示します';
+      setGuideCount(); workCount(); return;
+    }
+    var r=Math.max(2,Math.ceil(a/per));
+    if(r>10)r=10;
+    nSel.value=r;
+    t.textContent='延べ面積 '+a+'㎡ ／ 1箇所あたり '+per+'㎡ → 目安の配置箇所数';
+    setGuideCount();
+    build();
+  }
+
+  function build(){
+    var n=parseInt(nSel.value,10);
+    ['x','y'].forEach(function(ax){
+      var box=document.getElementById('M'+ax), h='';
+      for(var i=1;i<=n;i++){
+        var v=vals[ax]['m'+i]!==undefined?vals[ax]['m'+i]:'';
+        h+='<div><label for="dim'+ax.toUpperCase()+i+'">設置寸法 M'+i+'<span class="u">mm</span></label>'
+          +'<input type="number" id="dim'+ax.toUpperCase()+i+'" data-ax="'+ax+'" data-i="'+i+'" step="0.1" value="'+v+'"></div>';
+      }
+      box.innerHTML=h;
+      Array.prototype.forEach.call(box.querySelectorAll('input'),function(el){
+        el.addEventListener('input',function(){vals[el.dataset.ax]['m'+el.dataset.i]=el.value;judge();});
+      });
+      document.getElementById('cand'+ax).innerHTML='';
+    });
+    judge();
+  }
+
+  // 見出し行
+  function cap(t){ return '<div class="eq-cap">'+t+'</div>'; }
+  // 数式1行（= の位置をそろえる）。no と lbl は続き行では空にする
+  // 3列版（番号なし）。左辺・= ・右辺
+  function eq3(lbl,op,rhs){
+    return '<span class="eq-l">'+(lbl||'')+'</span>'
+      +'<span class="eq-op">'+(op||'')+'</span>'
+      +'<span class="eq-r">'+rhs+'</span>';
+  }
+  function eq(no,lbl,op,rhs){
+    return '<span class="eq-no">'+(no||'')+'</span>'
+      +'<span class="eq-l">'+(lbl||'')+'</span>'
+      +'<span class="eq-op">'+(op||'')+'</span>'
+      +'<span class="eq-r">'+rhs+'</span>';
+  }
+
+  function workCount(){
+    var a=num('area'), per=parseFloat(document.getElementById('snow').value);
+    var n=parseInt(nSel.value,10);
+    var sn=document.getElementById('snow').options[document.getElementById('snow').selectedIndex].text;
+    var h='<p class="w-ttl">配置箇所数 n の算出</p>';
+    if(a===null||a<=0){
+      h+='<div class="w-empty">延べ面積が未入力のため、設置数は手動選択の <em>'+n+' 箇所</em> を使用しています。</div>';
+      document.getElementById('workN').innerHTML=h; return;
+    }
+    var raw=a/per, ce=Math.ceil(raw), fin=Math.min(10,Math.max(2,ce));
+    h+='<div class="eq">'
+      + cap('① 1箇所あたりの延べ面積（'+sn+'）')
+      + eq('①','区分表より','=','<em>'+per+'</em> ㎡ ／ 1箇所')
+      + cap('② 必要箇所数')
+      + eq('②','n','=','延べ面積 ÷ 1箇所あたり面積')
+      + eq('','','=',a+' ÷ '+per)
+      + eq('','','=','<em>'+(Math.round(raw*1000)/1000)+'</em>')
+      + cap('③ 切り上げ')
+      + eq('③','n','=','ceil('+(Math.round(raw*1000)/1000)+')')
+      + eq('','','=','<em>'+ce+'</em>')
+      + cap('④ 下限の適用（n ≧ 2）')
+      + eq('④','n','=','<em>'+fin+'</em> 箇所（一方向）')
+      + eq('','合計','=','<em>'+(fin*2)+'</em> 箇所')
+      + (n!==fin ? cap('※ 現在は手動で '+n+' 箇所に変更されています。以下の計算には '+n+' を使います。') : '')
+      +'</div>';
+    document.getElementById('workN').innerHTML=h;
+  }
+
+  function judge(){
+    var n=parseInt(nSel.value,10);
+    [['x','Lx','Gx','Rx','refx','btnx','workX','X'],['y','Ly','Gy','Ry','refy','btny','workY','Y']].forEach(function(c){
+      var ax=c[0], L=num(c[1]), G=num(c[2]);
+      var box=document.getElementById(c[3]), ref=document.getElementById(c[4]);
+      var work=document.getElementById(c[6]);
+      document.getElementById(c[5]).disabled=!(L!==null&&L>0&&G!==null);
+
+      ref.innerHTML=(L!==null&&L>0)
+        ? '参考｜側端部配置 L/4 = <b>'+fmt(L/4)+'</b> mm ・ 中央部配置 L/6 = <b>'+fmt(L/6)+'</b> mm' : '';
+
+      var sum=0, filled=0, list=[];
+      for(var i=1;i<=n;i++){
+        var v=parseFloat(vals[ax]['m'+i]);
+        if(!isNaN(v)){sum+=v;filled++;list.push(v);}
+      }
+      var wh='<p class="w-ttl"><span class="axis">'+c[7]+'</span>'+c[7]+'方向の判定</p>';
+
+      if(L===null||L<=0||G===null||filled<n){
+        box.className='verdict v-idle';
+        box.textContent='建物全長・重心位置・設置寸法をすべて入力すると判定します';
+        work.innerHTML=wh+'<div class="w-empty">L・G・M をすべて入力すると数式を表示します。</div>';
+        return;
+      }
+      var left=Math.abs(sum-G*n), right=L/3, ok=left<=right;
+
+      box.className='verdict '+(ok?'v-ok':'v-ng');
+      box.innerHTML='<span class="v-mark">'+(ok?'〇 適合':'× 不適合')+'</span>'
+        +'<div class="v-eq">'
+          +'<span class="ve-l">| ΣM − G×n |</span><span class="ve-o">=</span><span class="ve-r">'+fmt(left)+' mm</span>'
+          +'<span class="ve-l">L ÷ 3</span><span class="ve-o">=</span><span class="ve-r">'+fmt(right)+' mm</span>'
+          +'<span class="ve-l">判定</span><span class="ve-o">'+(ok?'≦':'＞')+'</span><span class="ve-r">'
+            +(ok?'余裕 '+fmt(right-left)+' mm':'超過 '+fmt(left-right)+' mm')+'</span>'
+        +'</div>';
+
+      var mlist=list.map(function(v){return fmt(v);}).join(' ＋ ');
+      var mgen=[]; for(var q=1;q<=n;q++)mgen.push('M'+q);
+      wh+='<div class="eq eq3">'
+        + eq3('| ('+mgen.join(' ＋ ')+') − (G × n) |','=','| '+mlist+' − '+fmt(G)+' × '+n+' |')
+        + eq3('','=','| '+fmt(sum)+' − '+fmt(G*n)+' |')
+        + eq3('','=','<em>'+fmt(left)+'</em> mm')
+        + eq3('L ÷ 3','=',fmt(L)+' ÷ 3')
+        + eq3('','=','<em>'+fmt(right)+'</em> mm')
+        + eq3('判定',(ok?'≦':'＞'),'<span class="'+(ok?'eq-ok':'eq-ng')+'">'
+              +fmt(left)+(ok?' ≦ ':' ＞ ')+fmt(right)+'　→　'+(ok?'〇 適合':'× 不適合')+'</span>')
+        +'</div>';
+      work.innerHTML=wh;
+    });
+    workCount();
+  }
+
+  function subsetsWithSum(K,n,target){
+    var out=[];
+    (function rec(start,left,sum,pick){
+      if(out.length>400)return;
+      if(left===0){if(sum===target)out.push(pick.slice());return;}
+      var minRest=0,maxRest=0,i;
+      for(i=0;i<left;i++){minRest+=start+i;maxRest+=K-i;}
+      if(sum+minRest>target||sum+maxRest<target)return;
+      for(i=start;i<=K-left+1;i++){pick.push(i);rec(i+1,left-1,sum+i,pick);pick.pop();}
+    })(0,n,0,[]);
+    return out;
+  }
+
+  function recommend(ax){
+    var L=num(ax==='x'?'Lx':'Ly'), G=num(ax==='x'?'Gx':'Gy');
+    var mod=num('mod')||910, n=parseInt(nSel.value,10);
+    var host=document.getElementById('cand'+ax);
+    if(L===null||L<=0||G===null){host.innerHTML='';return;}
+
+    var K=Math.floor(L/mod+1e-6);
+    if(K+1<n){
+      host.innerHTML='<div class="cand"><p class="cand-h">通り芯の数（'+(K+1)+'本）が設置数 '+n+' に足りません。モジュールを確認してください。</p></div>';
+      return;
+    }
+
+    var minS=n*(n-1)/2, maxS=0;
+    for(var i=0;i<n;i++)maxS+=K-i;
+    var ideal=G*n/mod;
+    var sums=[];
+    for(var s=minS;s<=maxS;s++)sums.push(s);
+    sums.sort(function(a,b){return Math.abs(a-ideal)-Math.abs(b-ideal);});
+
+    var cands=[];
+    for(var k=0;k<sums.length&&cands.length<10;k++){
+      var subs=subsetsWithSum(K,n,sums[k]);
+      subs.forEach(function(idx){
+        var pos=idx.map(function(v){return v*mod;});
+        var gap=Infinity;
+        for(var j=1;j<pos.length;j++)gap=Math.min(gap,pos[j]-pos[j-1]);
+        cands.push({pos:pos,sum:sums[k]*mod,gap:gap===Infinity?0:gap});
+      });
+      cands.sort(function(a,b){
+        var da=Math.abs(a.sum-G*n), db=Math.abs(b.sum-G*n);
+        if(da!==db)return da-db;
+        return b.gap-a.gap;
+      });
+      cands=cands.slice(0,10);
+    }
+
+    var limit=L/3, h='<div class="cand"><p class="cand-h">通り芯 '+mod+'mm ／ 候補 '+cands.length+'件（L/3 = '+fmt(limit)+' mm 以下が適合）</p>';
+    cands.forEach(function(c,i){
+      var d=Math.abs(c.sum-G*n), ok=d<=limit;
+      h+='<div class="c-row'+(i===0?' best':'')+'">'
+        +'<div class="c-top"><span class="c-rank">候補 '+(i+1)+'</span>'
+        +'<span class="c-diff" style="color:'+(ok?'var(--ok)':'var(--ng)')+'">'+(ok?'〇':'×')+' 判定値 '+fmt(d)+' mm</span></div>'
+        +'<div class="c-pos">'+c.pos.map(function(p,j){return 'M'+(j+1)+' = '+fmt(p);}).join('　／　')+'</div>'
+        +'<div class="bar"><u style="left:'+(G/L*100).toFixed(2)+'%" title="重心"></u>'
+        +c.pos.map(function(p){return '<i style="left:'+(p/L*100).toFixed(2)+'%"></i>';}).join('')
+        +'</div>'
+        +'<div class="c-act"><span class="c-note">最小間隔 '+fmt(c.gap)+' mm</span>'
+        +'<button class="btn btn-sm" type="button" data-ax="'+ax+'" data-pos="'+c.pos.join(',')+'">この配置を入力</button></div>'
+        +'</div>';
+    });
+    h+='</div>';
+    host.innerHTML=h;
+
+    Array.prototype.forEach.call(host.querySelectorAll('button'),function(b){
+      b.addEventListener('click',function(){
+        var a=b.dataset.ax, p=b.dataset.pos.split(',');
+        p.forEach(function(v,j){
+          vals[a]['m'+(j+1)]=v;
+          var el=document.getElementById('dim'+a.toUpperCase()+(j+1));
+          if(el)el.value=v;
+        });
+        judge();
+      });
+    });
+  }
+
+  document.getElementById('area').addEventListener('input',suggest);
+  document.getElementById('snow').addEventListener('change',suggest);
+  nSel.addEventListener('change',function(){setGuideCount();build();});
+  document.getElementById('mod').addEventListener('input',function(){
+    ['x','y'].forEach(function(ax){document.getElementById('cand'+ax).innerHTML='';});
+  });
+  ['Lx','Gx','Ly','Gy'].forEach(function(id){document.getElementById(id).addEventListener('input',judge);});
+  document.getElementById('btnx').addEventListener('click',function(){recommend('x');});
+  document.getElementById('btny').addEventListener('click',function(){recommend('y');});
+
+  window.MIRAIE={
+    getN:function(){return parseInt(nSel.value,10);},
+    getState:function(){
+      var n=parseInt(nSel.value,10), st={
+        area:document.getElementById('area').value,
+        snow:document.getElementById('snow').value,
+        n:nSel.value, mod:document.getElementById('mod').value,
+        Lx:document.getElementById('Lx').value, Gx:document.getElementById('Gx').value,
+        Ly:document.getElementById('Ly').value, Gy:document.getElementById('Gy').value,
+        mx:[], my:[]
+      }, i;
+      for(i=1;i<=n;i++){
+        st.mx.push(vals.x['m'+i]!==undefined?vals.x['m'+i]:'');
+        st.my.push(vals.y['m'+i]!==undefined?vals.y['m'+i]:'');
+      }
+      return st;
+    },
+    getResult:function(){
+      var n=parseInt(nSel.value,10), out={};
+      [['x','Lx','Gx'],['y','Ly','Gy']].forEach(function(c){
+        var L=num(c[1]), G=num(c[2]), sum=0, filled=0, i;
+        for(i=1;i<=n;i++){var v=parseFloat(vals[c[0]]['m'+i]);if(!isNaN(v)){sum+=v;filled++;}}
+        out[c[0]]=(L!==null&&L>0&&G!==null&&filled===n)?(Math.abs(sum-G*n)<=L/3):null;
+      });
+      return out;
+    },
+    setState:function(st){
+      if(!st)return;
+      document.getElementById('area').value=st.area||'';
+      if(st.snow)document.getElementById('snow').value=st.snow;
+      if(st.mod)document.getElementById('mod').value=st.mod;
+      if(st.n)nSel.value=st.n;
+      vals={x:{},y:{}};
+      (st.mx||[]).forEach(function(v,i){vals.x['m'+(i+1)]=v;});
+      (st.my||[]).forEach(function(v,i){vals.y['m'+(i+1)]=v;});
+      build();
+      document.getElementById('Lx').value=st.Lx||'';
+      document.getElementById('Gx').value=st.Gx||'';
+      document.getElementById('Ly').value=st.Ly||'';
+      document.getElementById('Gy').value=st.Gy||'';
+      var t=document.getElementById('guide-t');
+      if(t)t.textContent='保存した内容を読み込みました';
+      setGuideCount();
+      judge();
+    },
+    getModule:function(){return num('mod')||910;},
+    apply:function(d,scroll){
+      if(d.Lx!=null)document.getElementById('Lx').value=d.Lx;
+      if(d.Ly!=null)document.getElementById('Ly').value=d.Ly;
+      if(d.Gx!=null)document.getElementById('Gx').value=d.Gx;
+      if(d.Gy!=null)document.getElementById('Gy').value=d.Gy;
+      [['x',d.mx],['y',d.my]].forEach(function(p){
+        if(!p[1])return;
+        p[1].forEach(function(v,j){
+          vals[p[0]]['m'+(j+1)]=v;
+          var el=document.getElementById('dim'+p[0].toUpperCase()+(j+1));
+          if(el)el.value=v;
+        });
+      });
+      judge();
+      if(scroll)document.getElementById('Lx').scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  };
+
+  build();
+})();
+</script>
+<script>
+(function(){
+  var drop=document.getElementById('drop'), stage=document.getElementById('stage');
+  var cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+  var img=null, view=1, mode='rect', mmpp=null, gridPx=null;
+  var geo={rect:null,cg:null,mx:[],my:[]}, drag=null, calib=[];
+
+  var fi=document.createElement('input');
+  fi.type='file'; fi.accept='image/*'; fi.style.display='none';
+  document.body.appendChild(fi);
+
+  function load(src){
+    var im=new Image();
+    im.onload=function(){
+      img=im; geo={rect:null,cg:null,mx:[],my:[]}; calib=[]; mode='rect';
+      var maxW=Math.min(920,document.querySelector('.wrap').clientWidth-50);
+      view=Math.min(1,maxW/im.width);
+      cv.width=Math.round(im.width*view); cv.height=Math.round(im.height*view);
+      drop.style.display='none'; stage.style.display='block';
+      ocrRes=null;
+      document.getElementById('ocrBox').innerHTML=
+        '<div class="ocr"><h3>鮮明化しています…</h3><p class="hint">2倍拡大とアンシャープを2回かけています。</p></div>';
+      ctx.drawImage(img,0,0,cv.width,cv.height);
+      setTimeout(function(){
+        grabFull(); buildEnhanced();
+        detectGrid(); detectCentroid();
+        var ok=buildGeoResult();
+        document.getElementById('ocrBox').innerHTML='';
+        renderOcr(); setMode(ok?'mx':'rect'); draw();
+        if(ok&&mmpp)readDims();
+      },50);
+    };
+    im.src=src;
+  }
+
+  function sample(){
+    var w=Math.min(1400,img.width), h=Math.round(img.height*w/img.width);
+    var c=document.createElement('canvas'); c.width=w; c.height=h;
+    var x=c.getContext('2d'); x.drawImage(img,0,0,w,h);
+    return {d:x.getImageData(0,0,w,h).data,w:w,h:h,k:img.width/w};
+  }
+
+  function detectGrid(){
+    var s=sample(), col=new Array(s.w).fill(0), row=new Array(s.h).fill(0), i,j,p;
+    for(j=0;j<s.h;j++)for(i=0;i<s.w;i++){
+      p=(j*s.w+i)*4;
+      var r=s.d[p],g=s.d[p+1],b=s.d[p+2];
+      // 水色（シアン）だけを拾う。青や紫の線まで含めるとグリッドの検出が破綻し、
+      // 縮尺が数倍ずれる原因になるため、緑成分も高いことを条件に加える
+      if(b>150&&b-r>40&&g>150){col[i]++;row[j]++;}
+    }
+    function centers(arr,len){
+      var mx=0,k; for(k=0;k<arr.length;k++)if(arr[k]>mx)mx=arr[k];
+      if(mx<len*0.25)return null;
+      var th=mx*0.5, cen=[], run=null;
+      for(k=0;k<arr.length;k++){
+        if(arr[k]>=th){ if(run===null)run=[k,k]; else run[1]=k; }
+        else if(run){cen.push((run[0]+run[1])/2);run=null;}
+      }
+      if(run)cen.push((run[0]+run[1])/2);
+      return cen.length>=4?cen:null;
+    }
+    // 各グリッド線に格子番号を割り当て、原点とピッチを最小二乗で求める（鮮明な画像で高精度）
+    function fitLSQ(cen,k){
+      if(!cen)return null;
+      var d=[],i;
+      for(i=1;i<cen.length;i++)d.push(cen[i]-cen[i-1]);
+      d.sort(function(a,b){return a-b;});
+      var med=d[d.length>>1];
+      if(!(med>3))return null;
+      var n=cen.length,sk=0,sv=0,skv=0,skk=0,idx;
+      for(i=0;i<n;i++){
+        idx=Math.round((cen[i]-cen[0])/med);
+        sk+=idx; sv+=cen[i]; skv+=idx*cen[i]; skk+=idx*idx;
+      }
+      var den=n*skk-sk*sk;
+      if(Math.abs(den)<1e-9)return null;
+      var pitch=(n*skv-sk*sv)/den, o=(sv-pitch*sk)/n;
+      var res=0;
+      for(i=0;i<n;i++){ idx=Math.round((cen[i]-cen[0])/med); res=Math.max(res,Math.abs(o+pitch*idx-cen[i])); }
+      return {o:o*k,p:pitch*k,res:res,n:n};
+    }
+    // 自己相関でピッチ、くし形テンプレートとの相関で位相（原点）を求める。
+    // ぼけ・圧縮でピークが崩れた画像でもピッチが大きく外れにくい
+    function fitAutocorr(arr,k,lo,hi){
+      var n=arr.length,mean=0,i; for(i=0;i<n;i++)mean+=arr[i]; mean/=n;
+      var sig=new Array(n); for(i=0;i<n;i++)sig[i]=arr[i]-mean;
+      function ac(lag){ if(lag<1||lag>=n)return -Infinity; var s2=0,x; for(x=0;x<n-lag;x++)s2+=sig[x]*sig[x+lag]; return s2; }
+      var bestLag=lo,bestVal=-Infinity,lag;
+      for(lag=lo;lag<hi;lag++){ var v=ac(lag); if(v>bestVal){bestVal=v;bestLag=lag;} }
+      // 格子の縦線はスパイク状の信号なので、真のピッチの整数倍でも相関が強く出る（倍音）。
+      // 約数を調べ、相関がなお強く残る最小の約数を基本周期として採用する
+      var fund=bestLag,kk;
+      for(kk=2;kk<=5;kk++){
+        var cand=Math.round(bestLag/kk);
+        if(cand<lo)break;
+        if(ac(cand)>bestVal*0.65)fund=cand;
+      }
+      var y1=ac(fund-1), y2=ac(fund), y3=ac(fund+1);
+      var den=(y1-2*y2+y3), frac=Math.abs(den)>1e-9?(y1-y3)/(2*den):0;
+      var pitch=fund+frac;
+      var bestPhase=0,bestSum=-Infinity,ph;
+      for(ph=0;ph<pitch;ph+=pitch/12){
+        var sum=0,x2=ph;
+        while(x2<n){ sum+=arr[Math.round(x2)]; x2+=pitch; }
+        if(sum>bestSum){bestSum=sum;bestPhase=ph;}
+      }
+      return {o:bestPhase*k,p:pitch*k};
+    }
+    var loPx=15, hiPx=Math.min(80,Math.floor(Math.min(s.w,s.h)/5));
+    var lsqX=fitLSQ(centers(col,s.h),s.k), lsqY=fitLSQ(centers(row,s.w),s.k);
+    var acX=fitAutocorr(col,s.k,loPx,hiPx), acY=fitAutocorr(row,s.k,loPx,hiPx);
+    function choose(lsq,ac){
+      // LSQが多点・低残差できれいに求まっていれば、それを信頼する。
+      // 自己相関は「倍音」（真のピッチの整数倍）を拾うことがあり、
+      // 一致しないからといってLSQを疑うと、むしろ良い結果を捨てることになる
+      if(lsq&&lsq.n>=6&&lsq.res<1.5)return lsq;
+      if(ac)return ac;  // LSQがうまく求まらない（ぼけ・圧縮など）ときだけ自己相関を使う
+      return lsq;
+    }
+    var fx=choose(lsqX,acX), fy=choose(lsqY,acY);
+    gridFit={x:fx,y:fy};
+    var sp=(fx&&fy)?(fx.p+fy.p)/2:(fx?fx.p:(fy?fy.p:null));
+    if(sp){ gridPx=sp; mmpp=window.MIRAIE.getModule()/gridPx; }
+    else { gridPx=null; mmpp=null; }
+  }
+
+  // 画素位置を格子番号に変換する（格子が取れていないときは null）
+  function toIdx(v,axis){
+    var f=gridFit&&gridFit[axis];
+    if(!f)return null;
+    return (v-f.o)/f.p;
+  }
+  // スパンを格子刻み（既定 1/4 モジュール）に丸めた寸法
+  function latticeMM(span,axis){
+    var f=gridFit&&gridFit[axis];
+    if(!f)return null;
+    var q=Math.round(span/f.p*4)/4;
+    return q*window.MIRAIE.getModule();
+  }
+  // 値が 1/4 モジュールの整数倍かどうか
+  function onLattice(v){
+    var q=v/window.MIRAIE.getModule()*4;
+    return Math.abs(q-Math.round(q))<0.004;
+  }
+
+  // 赤い印から重心位置を求める。円環部分を最小二乗で円に当てはめるのが最も精度が高い
+  // 重み付き最小二乗の円フィット（Kåsa法）。3元連立をガウス消去で解く
+  function fitCircle(P){
+    var n=0,sx=0,sy=0,sxx=0,syy=0,sxy=0,sz=0,sxz=0,syz=0,i,X,Y,Z,w;
+    for(i=0;i<P.length;i++){
+      X=P[i][0]; Y=P[i][1]; w=P[i][2]||1; Z=X*X+Y*Y;
+      n+=w; sx+=w*X; sy+=w*Y; sxx+=w*X*X; syy+=w*Y*Y; sxy+=w*X*Y;
+      sz+=w*Z; sxz+=w*X*Z; syz+=w*Y*Z;
+    }
+    if(P.length<12)return null;
+    var M=[[sxx,sxy,sx,sxz],[sxy,syy,sy,syz],[sx,sy,n,sz]],k,q,t2,c2;
+    for(k=0;k<3;k++){
+      var piv=k;
+      for(q=k+1;q<3;q++)if(Math.abs(M[q][k])>Math.abs(M[piv][k]))piv=q;
+      if(Math.abs(M[piv][k])<1e-9)return null;
+      t2=M[k];M[k]=M[piv];M[piv]=t2;
+      for(q=k+1;q<3;q++){
+        var f=M[q][k]/M[k][k];
+        for(c2=k;c2<4;c2++)M[q][c2]-=f*M[k][c2];
+      }
+    }
+    var a2=M[2][3]/M[2][2];
+    var a1=(M[1][3]-M[1][2]*a2)/M[1][1];
+    var a0=(M[0][3]-M[0][1]*a1-M[0][2]*a2)/M[0][0];
+    var cx=a0/2, cy=a1/2;
+    return {x:cx,y:cy,r:Math.sqrt(Math.max(0,a2+cx*cx+cy*cy))};
+  }
+
+  function detectCentroid(){
+    var s=sample(), pts=[], i, j, p;
+    // 「赤らしさ」を重みに使う。輪郭のぼけた画素も情報として活かせるため、
+    // 単純な白黒判定よりサブピクセル精度が上がる
+    for(j=0;j<s.h;j++)for(i=0;i<s.w;i++){
+      p=(j*s.w+i)*4;
+      var r=s.d[p],g=s.d[p+1],b=s.d[p+2];
+      var redness=r-Math.max(g,b);
+      if(redness>40&&r>120)pts.push([i,j,redness]);
+    }
+    if(pts.length<12||pts.length>s.w*s.h*0.02){ geo.cg=null; cgInfo=null; return; }
+    var sw=0,cx=0,cy=0;
+    for(i=0;i<pts.length;i++){ sw+=pts[i][2]; cx+=pts[i][0]*pts[i][2]; cy+=pts[i][1]*pts[i][2]; }
+    cx/=sw; cy/=sw;
+    var rmax=0,d;
+    for(i=0;i<pts.length;i++){
+      d=Math.hypot(pts[i][0]-cx,pts[i][1]-cy);
+      if(d>rmax)rmax=d;
+    }
+    // 中心寄りの塗りつぶし部分を除き、外周の円環だけを使う
+    var ring=[];
+    for(i=0;i<pts.length;i++){
+      d=Math.hypot(pts[i][0]-cx,pts[i][1]-cy);
+      if(d>=rmax*0.45)ring.push(pts[i]);
+    }
+    var best={x:cx,y:cy}, mode='bbox', fit=fitCircle(ring), res=null;
+    if(fit&&ring.length>=30){
+      // 外れ値（他の線と重なった画素など）を落としながら数回フィットし直す
+      var cur=ring, pass;
+      for(pass=0;pass<4;pass++){
+        var rs=[],sum=0;
+        for(i=0;i<cur.length;i++){
+          var e=Math.abs(Math.hypot(cur[i][0]-fit.x,cur[i][1]-fit.y)-fit.r);
+          rs.push(e); sum+=e;
+        }
+        var mean=sum/cur.length, sd=0;
+        for(i=0;i<rs.length;i++)sd+=(rs[i]-mean)*(rs[i]-mean);
+        sd=Math.sqrt(sd/rs.length);
+        var lim=Math.max(0.8,2*sd), next=[];
+        for(i=0;i<cur.length;i++)if(rs[i]<lim)next.push(cur[i]);
+        if(next.length<20||next.length===cur.length)break;
+        var f2=fitCircle(next);
+        if(!f2)break;
+        cur=next; fit=f2;
+      }
+      res=0;
+      for(i=0;i<cur.length;i++)res+=Math.abs(Math.hypot(cur[i][0]-fit.x,cur[i][1]-fit.y)-fit.r);
+      res/=cur.length;
+      if(res<1.5&&Math.hypot(fit.x-cx,fit.y-cy)<4){
+        best={x:fit.x,y:fit.y}; mode='circle'; ring=cur;
+      }
+    }
+    geo.cg={x:best.x*s.k,y:best.y*s.k};
+    cgInfo={mode:mode,ring:ring.length,r:rmax*s.k,res:res};
+  }
+
+  function toImg(e){
+    var r=cv.getBoundingClientRect();
+    return {x:(e.clientX-r.left)*(cv.width/r.width)/view,
+            y:(e.clientY-r.top)*(cv.height/r.height)/view};
+  }
+  function snapFrac(){ return parseFloat(document.getElementById('snap').value)||0; }
+  function snapV(mm){
+    var f=snapFrac();
+    if(!f)return Math.round(mm*10)/10;
+    var step=window.MIRAIE.getModule()*f;
+    return Math.round(mm/step)*step;
+  }
+  // 格子番号どうしの差から寸法を出す（端点のにじみの影響を受けない）
+  function idxMM(px,originPx,axis){
+    var a=toIdx(px,axis), b=toIdx(originPx,axis);
+    if(a===null||b===null)return null;
+    var f=snapFrac();
+    if(f){ a=Math.round(a/f)*f; b=Math.round(b/f)*f; }
+    else { b=Math.round(b*4)/4; }
+    return Math.round((a-b)*window.MIRAIE.getModule()*100)/100;
+  }
+  function mm(px){return px*scaleMM();}
+
+  function draw(){
+    if(!img)return;
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.drawImage(img,0,0,cv.width,cv.height);
+    var R=geo.rect;
+    if(R){
+      ctx.strokeStyle='#2F5C8A'; ctx.lineWidth=2;
+      ctx.strokeRect(R.x*view,R.y*view,R.w*view,R.h*view);
+      ctx.fillStyle='rgba(47,92,138,.07)';
+      ctx.fillRect(R.x*view,R.y*view,R.w*view,R.h*view);
+    }
+    if(geo.cg){
+      var c=geo.cg;
+      ctx.strokeStyle=(cgInfo&&cgInfo.mode==='circle')?'#1C6E52':'#A8332C'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(c.x*view,c.y*view,7,0,6.284); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(c.x*view-12,c.y*view); ctx.lineTo(c.x*view+12,c.y*view);
+      ctx.moveTo(c.x*view,c.y*view-12); ctx.lineTo(c.x*view,c.y*view+12);
+      ctx.stroke();
+    }
+    ctx.lineWidth=3; ctx.strokeStyle='#1C6E52';
+    geo.mx.forEach(function(p){
+      ctx.beginPath();
+      ctx.moveTo((R?R.x:0)*view,p*view); ctx.lineTo((R?R.x+R.w:cv.width/view)*view,p*view);
+      ctx.stroke();
+    });
+    ctx.strokeStyle='#BA7517';
+    geo.my.forEach(function(p){
+      ctx.beginPath();
+      ctx.moveTo(p*view,(R?R.y:0)*view); ctx.lineTo(p*view,(R?R.y+R.h:cv.height/view)*view);
+      ctx.stroke();
+    });
+    ctx.fillStyle='#2F5C8A';
+    calib.forEach(function(p){ctx.beginPath();ctx.arc(p.x*view,p.y*view,5,0,6.284);ctx.fill();});
+    if(calib.length===2){
+      ctx.strokeStyle='#2F5C8A'; ctx.lineWidth=2; ctx.beginPath();
+      ctx.moveTo(calib[0].x*view,calib[0].y*view); ctx.lineTo(calib[1].x*view,calib[1].y*view); ctx.stroke();
+    }
+    status();
+  }
+
+  function fmt(v){return (Math.round(v*10)/10).toLocaleString('ja-JP');}
+  function status(){
+    var n=window.MIRAIE.getN();
+    document.getElementById('stScale').className='st'+(mmpp?'':' warn');
+    document.getElementById('stScale').querySelector('b').textContent=
+      mmpp?(Math.round(scaleMM()*1000)/1000+' mm/px'+(gridFit&&gridFit.x?'／格子 '+(Math.round(gridFit.x.p*100)/100)+'px':'')):'未設定';
+    var R=geo.rect;
+    document.getElementById('stL').querySelector('b').textContent=
+      (R&&mmpp)?fmt(measMM(R.h))+' × '+fmt(measMM(R.w)):'—';
+    document.getElementById('stG').querySelector('b').textContent=
+      (R&&geo.cg)?(function(){
+        var a=idxRaw(geo.cg.y,R.y,'y'), b2=idxRaw(geo.cg.x,R.x,'x');
+        return (a!==null?fmt(a):'—')+' ／ '+(b2!==null?fmt(b2):'—')
+          +(cgInfo&&cgInfo.mode==='circle'?'（円フィット）':'');
+      })():'—';
+    document.getElementById('stM').querySelector('b').textContent=
+      geo.mx.length+' ／ '+geo.my.length+'（各 '+n+' 箇所）';
+    var msg={
+      rect:'外周を手動で指定します。左上から右下までドラッグしてください。',
+      cg:'重心の位置をクリックしてください。',
+      mx:'X方向のミライエ（横向きの壁）をクリック。上端からの距離を M として '+n+' 箇所ぶん取ります。',
+      my:'Y方向のミライエ（縦向きの壁）をクリック。左端からの距離を M として '+n+' 箇所ぶん取ります。',
+      cal:'縮尺の基準にする2点をクリックしてください。'
+    };
+    document.getElementById('hint').textContent=msg[mode]||'';
+  }
+
+  function setMode(m){
+    mode=m;
+    [['rect','mRect'],['cg','mCg'],['mx','mMx'],['my','mMy'],['cal','calib']].forEach(function(p){
+      document.getElementById(p[1]).classList.toggle('on',mode===p[0]);
+    });
+    status();
+  }
+
+  cv.addEventListener('mousedown',function(e){
+    if(mode!=='rect')return;
+    var p=toImg(e); drag={x:p.x,y:p.y};
+  });
+  cv.addEventListener('mousemove',function(e){
+    if(!drag)return;
+    var p=toImg(e);
+    geo.rect={x:Math.min(drag.x,p.x),y:Math.min(drag.y,p.y),
+              w:Math.abs(p.x-drag.x),h:Math.abs(p.y-drag.y)};
+    draw();
+  });
+  window.addEventListener('mouseup',function(){
+    if(drag&&geo.rect&&geo.rect.w>8&&geo.rect.h>8)setMode('cg');
+    drag=null; draw();
+  });
+
+  cv.addEventListener('click',function(e){
+    var p=toImg(e), n=window.MIRAIE.getN(), R=geo.rect;
+    if(mode==='cal'){
+      calib.push(p);
+      if(calib.length===2){
+        var d=Math.hypot(calib[1].x-calib[0].x,calib[1].y-calib[0].y);
+        var v=prompt('この2点間の実寸をmmで入力してください','910');
+        var mv=parseFloat(v);
+        if(!isNaN(mv)&&mv>0&&d>1){mmpp=mv/d;gridPx=window.MIRAIE.getModule()/mmpp;}
+        calib=[]; setMode(geo.rect?'cg':'rect');
+      }
+    }
+    else if(mode==='cg'){ geo.cg=p; setMode('mx'); }
+    else if(mode==='mx'){
+      if(!R||!mmpp)return;
+      if(geo.mx.length>=n)geo.mx=[];
+      var fx=snapFrac(), ix=toIdx(p.y,'y');
+      geo.mx.push((ix!==null&&fx&&gridFit.y)?(gridFit.y.o+Math.round(ix/fx)*fx*gridFit.y.p):p.y);
+      if(geo.mx.length>=n)setMode('my');
+    }
+    else if(mode==='my'){
+      if(!R||!mmpp)return;
+      if(geo.my.length>=n)geo.my=[];
+      var fy=snapFrac(), iy=toIdx(p.x,'x');
+      geo.my.push((iy!==null&&fy&&gridFit.x)?(gridFit.x.o+Math.round(iy/fy)*fy*gridFit.x.p):p.x);
+    }
+    draw();
+  });
+
+  document.getElementById('mRect').onclick=function(){setMode('rect');};
+  document.getElementById('mCg').onclick=function(){setMode('cg');};
+  document.getElementById('mMx').onclick=function(){geo.mx=[];setMode('mx');draw();};
+  document.getElementById('mMy').onclick=function(){geo.my=[];setMode('my');draw();};
+  document.getElementById('calib').onclick=function(){calib=[];setMode('cal');};
+  document.getElementById('reset').onclick=function(){
+    geo={rect:null,cg:null,mx:[],my:[]};calib=[];ocrRes=null;
+    document.getElementById('ocrBox').innerHTML='';
+    detectCentroid();
+    var ok=buildGeoResult(); renderOcr(); setMode(ok?'mx':'rect'); draw();
+    if(ok&&mmpp)readDims();
+  };
+  document.getElementById('clearImg').onclick=function(){
+    img=null;stage.style.display='none';drop.style.display='block';
+  };
+
+  // 読み取り結果と割り当てから、計算欄に値を流し込む
+  function applyDims(silent){
+    var R=geo.rect;
+    if(!R||!mmpp){ if(!silent)alert('縮尺と外周の指定が必要です。'); return; }
+
+    var LX=pick('x','L'), GX=pick('x','G'), LY=pick('y','L'), GY=pick('y','G');
+    var A=scaleMM(), n=window.MIRAIE.getN(), d={}, k;
+
+    d.Lx=LX?LX.value:Math.round(measMM(R.h));
+    d.Ly=LY?LY.value:Math.round(measMM(R.w));
+    if(GX)d.Gx=GX.value;
+    else if(geo.cg){var t1=idxRaw(geo.cg.y,R.y,'y'); if(t1!==null)d.Gx=Math.round(t1*100)/100;}
+    if(GY)d.Gy=GY.value;
+    else if(geo.cg){var t2=idxRaw(geo.cg.x,R.x,'x'); if(t2!==null)d.Gy=Math.round(t2*100)/100;}
+
+    // ミライエ位置：寸法線の割り当てを優先し、足りない分だけクリック位置で補う。
+    // 以前は1つでも欠けると全部を捨てていたため、寸法線が設置数より少ない図面で
+    // 読み取れていた分まで入力されなくなっていた
+    var ax0=LX?LX.a:R.y, ay0=LY?LY.a:R.x;
+    function fromClicks(ax){
+      var pts=(ax==='x')?geo.mx:geo.my;
+      var origin=(ax==='x')?ax0:ay0, gaxis=(ax==='x')?'y':'x';
+      return pts.slice().sort(function(a,b){return a-b;})
+        .map(function(p){var v=idxMM(p,origin,gaxis);return v!==null?v:Math.round((p-origin)*A*10)/10;});
+    }
+    function collect(ax){
+      var out=[],r,i,clicks=fromClicks(ax),ci=0,missing=0;
+      for(i=0;i<n;i++){
+        r=pick(ax,'M'+i);
+        if(r){ out.push(r.value); }
+        else if(ci<clicks.length){ out.push(clicks[ci++]); }
+        else { missing++; }
+      }
+      // 寸法線もクリックも足りない分は、建物幅を等分した位置を仮に置く。
+      // 空欄のままだと判定が走らないので、まず値を入れてから直してもらう
+      if(missing>0){
+        var L=(ax==='x')?d.Lx:d.Ly;
+        if(L>0){
+          var mod=window.MIRAIE.getModule();
+          for(i=0;i<missing;i++){
+            var pos=L*(out.length+1+i)/(n+1);
+            out.push(Math.round(pos/mod)*mod);
+          }
+        }
+      }
+      return out.sort(function(a,b){return a-b;});
+    }
+    d.mx=collect('x');
+    d.my=collect('y');
+
+    lastApplied=d;
+    window.MIRAIE.apply(d,!silent);
+    var dp=document.getElementById('diagPre');
+    if(dp)dp.textContent=diagText();
+  }
+  document.getElementById('apply').onclick=function(){applyDims(false);};
+
+  var fullData=null, ocrRes=null, lastApplied=null;
+  var enh=null, enhMild=null, SUP=1, fitA=null, fitB=0, gridFit=null, cgInfo=null;
+
+  function grabFull(){
+    var c=document.createElement('canvas');
+    c.width=img.width; c.height=img.height;
+    var x=c.getContext('2d'); x.drawImage(img,0,0);
+    fullData=x.getImageData(0,0,img.width,img.height).data;
+  }
+
+  // 2倍に拡大してアンシャープマスクをかける
+  function enhanceOnce(cin,amt){
+    var w=cin.width*2, h=cin.height*2;
+    var c=document.createElement('canvas'); c.width=w; c.height=h;
+    var x=c.getContext('2d');
+    x.imageSmoothingEnabled=true; x.imageSmoothingQuality='high';
+    x.drawImage(cin,0,0,w,h);
+    if(!amt)return c;   // amt=0 ならただの拡大のみ（シャープ処理をかけない版）
+    var id=x.getImageData(0,0,w,h), s=id.data, o=new Uint8ClampedArray(s);
+    var kx=[1,2,1,2,4,2,1,2,1];
+    for(var y=1;y<h-1;y++)for(var xx=1;xx<w-1;xx++){
+      var p=(y*w+xx)*4;
+      for(var ch=0;ch<3;ch++){
+        var sum=0,i=0;
+        for(var dy=-1;dy<=1;dy++)for(var dx=-1;dx<=1;dx++,i++)
+          sum+=s[((y+dy)*w+(xx+dx))*4+ch]*kx[i];
+        var blur=sum/16;
+        o[p+ch]=s[p+ch]+amt*(s[p+ch]-blur);
+      }
+    }
+    id.data.set(o); x.putImageData(id,0,0);
+    return c;
+  }
+
+  function buildEnhanced(){
+    var base=document.createElement('canvas');
+    base.width=img.width; base.height=img.height;
+    base.getContext('2d').drawImage(img,0,0);
+    var c=base, cMild=base, k=1, cap=12000000;
+    for(var i=0;i<2;i++){
+      if(c.width*2*c.height*2>cap)break;
+      c=enhanceOnce(c,0.8);       // 通常版：ぼけ・圧縮に強いが、細い輪を壊すことがある
+      cMild=enhanceOnce(cMild,0); // 無シャープ版：輪郭は保つが、ぼけには弱い
+      k*=2;
+    }
+    SUP=k;
+    var g=c.getContext('2d');
+    enh={data:g.getImageData(0,0,c.width,c.height).data,w:c.width,h:c.height};
+    var gm=cMild.getContext('2d');
+    enhMild={data:gm.getImageData(0,0,cMild.width,cMild.height).data,w:cMild.width,h:cMild.height};
+  }
+
+  function enhDark(x,y,th){
+    x=Math.round(x); y=Math.round(y);
+    if(x<0||y<0||x>=enh.w||y>=enh.h)return false;
+    var p=(y*enh.w+x)*4;
+    return Math.max(enh.data[p],enh.data[p+1],enh.data[p+2])<th;
+  }
+
+  // 鮮明化した画像で端点をサブピクセル精度に詰め直す
+  function refineSpan(L,vertical){
+    var gap=Math.max(2,Math.round(2*SUP)), best=null;
+    for(var d=-3;d<=3;d++){
+      var q=Math.round(L.p*SUP)+d, idx=[];
+      if(vertical){ for(var y=0;y<enh.h;y++)if(enhDark(q,y,115))idx.push(y); }
+      else        { for(var x=0;x<enh.w;x++)if(enhDark(x,q,115))idx.push(x); }
+      if(!idx.length)continue;
+      var s=idx[0],p=idx[0],cur=null;
+      for(var i=1;i<idx.length;i++){
+        if(idx[i]-p<=gap)p=idx[i];
+        else { if(!cur||p-s>cur[1]-cur[0])cur=[s,p]; s=idx[i]; p=idx[i]; }
+      }
+      if(!cur||p-s>cur[1]-cur[0])cur=[s,p];
+      if(!best||cur[1]-cur[0]>best[1]-best[0])best=cur;
+    }
+    if(!best)return;
+    L.a=best[0]/SUP; L.b=best[1]/SUP; L.span=(best[1]-best[0])/SUP;
+  }
+
+  function isDark(x,y,th){
+    x=Math.round(x); y=Math.round(y);
+    if(x<0||y<0||x>=img.width||y>=img.height)return false;
+    var p=(y*img.width+x)*4;
+    return Math.max(fullData[p],fullData[p+1],fullData[p+2])<th;
+  }
+
+  // 画像全体から寸法線を拾う。寸法線は「長い直線で、両隣がほぼ空白」という孤立性で判別する
+  function findLines(){
+    var W=img.width, H=img.height, hh=[], vv=[], x,y,i;
+    function density(x0,x1,y0,y1){
+      var c=0,n=0;
+      for(var yy=y0;yy<y1;yy++)for(var xx=x0;xx<x1;xx++){n++;if(isDark(xx,yy,115))c++;}
+      return n?c/n:0;
+    }
+    function merge(arr){
+      var res=[],cur=null;
+      arr.forEach(function(l){
+        if(cur&&l.p-cur.p<=3){ if(l.span>cur.span)cur=l; }
+        else { if(cur)res.push(cur); cur=l; }
+      });
+      if(cur)res.push(cur);
+      return res;
+    }
+    for(y=2;y<H-2;y++){
+      var lo=-1,hi=-1,cnt=0;
+      for(x=0;x<W;x++){ if(isDark(x,y,115)){ if(lo<0)lo=x; hi=x; cnt++; } }
+      var sp=hi-lo;
+      if(sp<W*0.10||cnt<sp*0.72)continue;
+      if(density(lo,hi+1,Math.max(0,y-7),Math.max(0,y-2))<0.10 &&
+         density(lo,hi+1,Math.min(H,y+3),Math.min(H,y+8))<0.10)
+        hh.push({p:y,a:lo,b:hi,span:sp});
+    }
+    for(x=2;x<W-2;x++){
+      var lo2=-1,hi2=-1,cnt2=0;
+      for(y=0;y<H;y++){ if(isDark(x,y,115)){ if(lo2<0)lo2=y; hi2=y; cnt2++; } }
+      var sp2=hi2-lo2;
+      if(sp2<H*0.10||cnt2<sp2*0.72)continue;
+      if(density(Math.max(0,x-7),Math.max(0,x-2),lo2,hi2+1)<0.10 &&
+         density(Math.min(W,x+3),Math.min(W,x+8),lo2,hi2+1)<0.10)
+        vv.push({p:x,a:lo2,b:hi2,span:sp2});
+    }
+    return {h:merge(hh),v:merge(vv)};
+  }
+
+  // 図面本体の中心。赤い重心点があればそれを、なければ濃い画素の中央値を使う
+  function planCenter(){
+    if(geo.cg)return geo.cg;
+    var xs=[],ys=[],step=Math.max(1,Math.round(img.width/300));
+    for(var y=0;y<img.height;y+=step)for(var x=0;x<img.width;x+=step)
+      if(isDark(x,y,115)){xs.push(x);ys.push(y);}
+    if(!xs.length)return {x:img.width/2,y:img.height/2};
+    xs.sort(function(a,b){return a-b;}); ys.sort(function(a,b){return a-b;});
+    return {x:xs[xs.length>>1],y:ys[ys.length>>1]};
+  }
+
+  // 建物に近い順（内側が先）に並べ替える
+  function orderLines(lines){
+    var c=planCenter();
+    var h=lines.h.slice().sort(function(a,b){return Math.abs(a.p-c.y)-Math.abs(b.p-c.y);});
+    var v=lines.v.slice().sort(function(a,b){return Math.abs(a.p-c.x)-Math.abs(b.p-c.x);});
+    return {h:h,v:v};
+  }
+
+  // 内側の寸法線から建物範囲を決める
+  function autoExtent(ord){
+    if(!ord.h.length||!ord.v.length)return false;
+    geo.rect={x:ord.h[0].a,w:ord.h[0].span,y:ord.v[0].a,h:ord.v[0].span};
+    return true;
+  }
+
+  // 寸法線のそばにある文字の帯を探す。線との余白の有無や、上下どちら側かに依存しない
+  function findLabelBand(L,vertical,reach,neighbors){
+    reach=reach||26;
+    var p=Math.round(L.p), a=Math.round(L.a), b=Math.round(L.b), span=b-a;
+    // 隣の寸法線の文字を拾わないよう、探索範囲を隣接線との中間までに制限する。
+    // 寸法線が密に並ぶ図面では、これがないと隣の数字を自分の値として読んでしまう
+    if(neighbors){
+      neighbors.forEach(function(q){
+        if(q===p)return;
+        reach=Math.min(reach,Math.max(3,Math.floor(Math.abs(q-p)/2)-1));
+      });
+    }
+    var c0=a+6, c1=b-6;
+    if(c1-c0<6){ c0=a; c1=b; }
+    var lim=vertical?img.width:img.height;
+    function stat(q){
+      if(q<0||q>=lim)return null;
+      var cnt=0,run=0,mx=0,i,dark;
+      for(i=c0;i<=c1;i++){
+        dark=vertical?isDark(q,i,115):isDark(i,q,115);
+        if(dark){cnt++;run++;if(run>mx)mx=run;} else run=0;
+      }
+      return {cnt:cnt,mx:mx};
+    }
+    var best=null;
+    [-1,1].forEach(function(side){
+      var d=1,st;
+      while(d<=4){ st=stat(p+side*d); if(!st||st.mx<=span*0.5)break; d++; }
+      var start=d, grp=null;
+      while(d<=reach){
+        st=stat(p+side*d);
+        if(!st)break;
+        if(st.mx>span*0.5)break;
+        if(st.cnt>0){ if(!grp)grp=[d,d]; else grp[1]=d; }
+        else if(grp&&d-grp[1]>2)break;
+        d++;
+      }
+      if(!grp)return;
+      var tot=0,x;
+      for(x=grp[0];x<=grp[1];x++){ st=stat(p+side*x); if(st)tot+=st.cnt; }
+      if(!best||tot>best.tot)best={tot:tot,side:side,grp:grp,start:start};
+    });
+    if(!best)return null;
+    var near=p+best.side*Math.max(best.grp[0],best.start);
+    var far =p+best.side*best.grp[1];
+    var q1=Math.min(near,far), q2=Math.max(near,far);
+    if(best.side<0){ q1-=5; q2=Math.min(p-2,q2+3); }
+    else           { q2+=5; q1=Math.max(p+2,q1-3); }
+    if(q2-q1<4)return null;
+    return vertical ? {x0:q1,y0:a,x1:q2,y1:b}
+                    : {x0:a,y0:q1,x1:b,y1:q2};
+  }
+
+  // 鮮明化した画像からラベルを切り出し、水色グリッドを白で消して階調を残したまま拡大する
+  // 大津の二値化のしきい値を求める（ノイズの多い圧縮画像で階調法より安定することがある）
+  function otsuThreshold(gray,n){
+    var hist=new Array(256).fill(0),i;
+    for(i=0;i<n;i++)hist[gray[i]]++;
+    var total=n,sumAll=0; for(i=0;i<256;i++)sumAll+=i*hist[i];
+    var sumB=0,wB=0,best=0,bestVar=-1;
+    for(i=0;i<256;i++){
+      wB+=hist[i]; if(wB===0)continue;
+      var wF=total-wB; if(wF===0)break;
+      sumB+=i*hist[i];
+      var mB=sumB/wB, mF=(sumAll-sumB)/wF;
+      var v=wB*wF*(mB-mF)*(mB-mF);
+      if(v>bestVar){bestVar=v;best=i;}
+    }
+    return best;
+  }
+
+  function labelCanvas(box,gamma,K,rotate,mode,src){
+    var buf=(src==='mild')?enhMild:enh;
+    var x0=Math.round(box.x0*SUP), y0=Math.round(box.y0*SUP);
+    var w=Math.max(1,Math.round((box.x1-box.x0)*SUP)), h=Math.max(1,Math.round((box.y1-box.y0)*SUP));
+    var tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h;
+    var tx=tmp.getContext('2d'), id=tx.createImageData(w,h);
+    var lut=new Uint8Array(256);
+    for(var t=0;t<256;t++)lut[t]=Math.round(255*Math.pow(t/255,gamma));
+    var gray=new Uint8Array(w*h), j,i;
+    for(j=0;j<h;j++)for(i=0;i<w;i++){
+      var sxp=x0+i, syp=y0+j, v=255;
+      if(sxp>=0&&syp>=0&&sxp<buf.w&&syp<buf.h){
+        var p=(syp*buf.w+sxp)*4;
+        var r=buf.data[p],g=buf.data[p+1],b=buf.data[p+2];
+        v=(b>140&&b-r>35&&g>140)?255:Math.round((r+g+b)/3);
+      }
+      gray[j*w+i]=v;
+    }
+    var STRICT_TH=90;
+    var th=(mode==='otsu')?otsuThreshold(gray,w*h):null;
+    for(j=0;j<h;j++)for(i=0;i<w;i++){
+      var idx=j*w+i, v;
+      if(mode==='otsu'){ v=gray[idx]<th?0:255; }
+      else if(mode==='strict'){ v=gray[idx]<STRICT_TH?0:255; }
+      else { v=lut[gray[idx]]; }
+      var q=idx*4;
+      id.data[q]=id.data[q+1]=id.data[q+2]=v; id.data[q+3]=255;
+    }
+    tx.putImageData(id,0,0);
+    var c=document.createElement('canvas');
+    c.width=w*K; c.height=h*K;
+    var x=c.getContext('2d');
+    x.imageSmoothingEnabled=true; x.imageSmoothingQuality='high';
+    x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height);
+    x.drawImage(tmp,0,0,c.width,c.height);
+    if(!rotate)return c;
+    var rr=document.createElement('canvas');
+    rr.width=c.height; rr.height=c.width;
+    var rx=rr.getContext('2d');
+    rx.translate(c.height,0); rx.rotate(Math.PI/2); rx.drawImage(c,0,0);
+    return rr;
+  }
+
+  function parseNum(t){
+    t=(t||'').replace(/\s/g,'');
+    if(!/^\d{1,3}([,.]\d{3})*([.]\d{1,2})?$/.test(t)&&!/^\d+([.]\d+)?$/.test(t))return null;
+    var s=t.replace(/,/g,''), m=s.match(/\./g);
+    if(m&&m.length>1)return null;
+    if(m&&/\.\d{3}$/.test(s)&&s.indexOf('.')<=3)s=s.replace('.','');
+    var v=parseFloat(s);
+    return (isFinite(v)&&v>=300&&v<=100000)?v:null;
+  }
+
+  function ensureT(){
+    return new Promise(function(res,rej){
+      if(window.Tesseract)return res();
+      var s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+      s.onload=function(){res();}; s.onerror=function(){rej();};
+      document.head.appendChild(s);
+    });
+  }
+
+  // 幾何情報だけで先に結果を組み立てる（OCR前でも使える）
+  function buildGeoResult(){
+    var ord=orderLines(findLines());
+    if(!ord.h.length||!ord.v.length){ ocrRes=null; return null; }
+    if(enh){ ord.h.forEach(function(L){refineSpan(L,false);});
+             ord.v.forEach(function(L){refineSpan(L,true);}); }
+    if(!autoExtent(ord)){ ocrRes=null; return null; }
+    fitA=null; fitB=0;
+    function row(L,vertical){
+      var lat=latticeMM(L.span,vertical?'y':'x');
+      return {geo:measMM(L.span),lat:lat,imgAxis:vertical?'y':'x',cands:[],
+              value:lat!==null?lat:Math.round(measMM(L.span)),ok:false,
+              src:lat!==null?'latonly':'meas',
+              pos:L.p,a:L.a,b:L.b,span:L.span};
+    }
+    // X方向の制震壁は横向きに並ぶため、その配置範囲は縦の寸法線で表される
+    ocrRes={x:ord.v.map(function(L){return row(L,true);}),
+            y:ord.h.map(function(L){return row(L,false);})};
+    markCentroidRows();
+    return ord;
+  }
+
+  // 端点が赤い印に重なる寸法線を重心寸法として印を付け、赤い印からの実測値を添える
+  function markCentroidRows(){
+    if(!ocrRes)return;
+    ['x','y'].forEach(function(ax){
+      var arr=ocrRes[ax]; if(!arr||!arr.length)return;
+      arr.forEach(function(d){ d.isCg=false; d.red=null; });
+      var im=arr[0].imgAxis||ax;
+      if(!geo.cg||!gridFit||!gridFit[im])return;
+      var c=(im==='x')?geo.cg.x:geo.cg.y;
+      var bestI=-1,bestD=1e9;
+      arr.forEach(function(d,i){
+        var dd=Math.min(Math.abs(d.b-c),Math.abs(d.a-c));
+        if(dd<bestD){bestD=dd;bestI=i;}
+      });
+      if(bestI<0||bestD>4)return;
+      var d0=arr[bestI], origin=(Math.abs(d0.b-c)<Math.abs(d0.a-c))?d0.a:d0.b;
+      var v=idxRaw(c,origin,im);
+      if(v===null)return;
+      d0.isCg=true; d0.red=Math.round(Math.abs(v)*100)/100;
+    });
+  }
+  // 格子番号の差（丸めなし）。重心は格子に乗らないのでスナップしない
+  function idxRaw(px,originPx,axis){
+    var a=toIdx(px,axis), b=toIdx(originPx,axis);
+    if(a===null||b===null)return null;
+    b=Math.round(b*4)/4;
+    return (a-b)*window.MIRAIE.getModule();
+  }
+
+  async function readDims(){
+    var box=document.getElementById('ocrBox');
+    if(!mmpp){alert('縮尺を設定できていません。「縮尺を2点で指定」を使ってください。');return;}
+    var ord=buildGeoResult();
+    if(!ord){
+      box.innerHTML='<div class="ocr"><h3 class="obad">寸法線を検出できませんでした</h3>'
+        +'<p class="hint">「外周を手動指定」でドラッグしてから、クリックで計測してください。</p></div>';
+      return;
+    }
+    draw();
+    renderOcr();
+
+    box.insertAdjacentHTML('afterbegin','<div class="ocr" id="ocrLoad"><h3>数字を読み取り中…</h3>'
+      +'<p class="hint">初回はOCRエンジンの読み込みに時間がかかります（通信が必要です）。</p></div>');
+    try{ await ensureT(); }
+    catch(e){
+      var el=document.getElementById('ocrLoad');
+      if(el)el.innerHTML='<h3 class="obad">OCRエンジンを読み込めませんでした</h3>'
+        +'<p class="hint">オフラインでは数字を読めません。下の値は線の実測値です。必要なら直接書き換えてください。</p>';
+      return;
+    }
+    var worker=await Tesseract.createWorker('eng');
+    await worker.setParameters({tessedit_char_whitelist:'0123456789,.',tessedit_pageseg_mode:'7'});
+
+    // 重心の行はOCRより先に赤い印から高精度な値が分かっているので、
+    // その行を先に特定して読み取りの参照値として使う（誤読との判別に効く）
+    function findRedRef(lines,vertical){
+      if(!geo.cg||!gridFit)return null;
+      // 縦の寸法線は縦方向に伸びるので、比べるのは重心のy座標・使う格子もy軸
+      var im=vertical?'y':'x', c=(im==='x')?geo.cg.x:geo.cg.y;
+      var bestI=-1,bestD=1e9;
+      lines.forEach(function(L,i){
+        var dd=Math.min(Math.abs(L.b-c),Math.abs(L.a-c));
+        if(dd<bestD){bestD=dd;bestI=i;}
+      });
+      if(bestI<0||bestD>4)return null;
+      var L0=lines[bestI], origin=(Math.abs(L0.b-c)<Math.abs(L0.a-c))?L0.a:L0.b;
+      var v=idxRaw(c,origin,im);
+      return (v===null)?null:{i:bestI,ref:Math.round(Math.abs(v)*100)/100};
+    }
+    var redX=findRedRef(ord.v,true), redY=findRedRef(ord.h,false);
+
+    // 1回目：候補を集めるだけ。縮尺の当てにならない値で候補を絞らない
+    async function scan(L,vertical,redRef,neighbors){
+      var b = findLabelBand(L,vertical,null,neighbors) ||
+              (vertical ? {x0:L.p-17,y0:L.a,x1:L.p-1,y1:L.b}
+                        : {x0:L.a,y0:L.p-16,x1:L.b,y1:L.p-2});
+      var cands={}, base=Math.max(2,Math.round(8/SUP));
+      // 階調・拡大率・二値化・シャープ処理の有無を変えた複数の見え方で読み、多数決の材料を増やす。
+      // シャープ処理は輪郭を強めてぼけに強くなる一方、小さな「8」などの輪を壊すことがあるため、
+      // 無シャープ版（mild）も交互に混ぜて多数決に加える
+      // （通常の鮮明な画像は先頭数個で全会一致するため速度への影響は小さい）
+      // 'strict' は淡い斜め補助線・円弧が数字にかぶって読めないときのための固定しきい値二値化。
+      // 数字のインク自体は必ず濃い黒（値0付近）に達するが、斜線や円弧は薄いグレー（値100超）で
+      // 描かれることが多いため、固定の低いしきい値で切ればインクだけを残せる（Otsuは画像ごとに
+      // しきい値が変わり、淡い線が多いと巻き込まれることがある）。他の候補が拾えないときの
+      // 保険として末尾に追加し、鮮明な画像では早期終了で実行されないようにする
+      var VAR=[[base,1.0,null,'sharp'],[base,1.0,null,'mild'],
+               [base+1,1.6,null,'sharp'],[base+3,1.0,null,'mild'],
+               [base,0.6,null,'sharp'],[base+1,1.3,null,'mild'],
+               [base+1,2.2,'otsu','sharp'],[base+5,1.0,null,'mild'],
+               [base+2,1.0,'strict','sharp'],[base+2,1.0,'strict','mild']];
+      var total=0;
+      for(var t=0;t<VAR.length;t++){
+        var c=labelCanvas(b,VAR[t][1],VAR[t][0],vertical,VAR[t][2],VAR[t][3]);
+        var r=await worker.recognize(c);
+        var v=parseNum(r.data.text.trim());
+        if(v!==null)cands[v]=(cands[v]||0)+1;
+        total++;
+        // 最初の4回（シャープ2・無シャープ2）で満場一致していれば、
+        // それ以上バリアントを増やしても結果は変わらないので早期終了する（鮮明な画像での速度維持）
+        if(total===4){
+          var ks=Object.keys(cands);
+          if(ks.length===1&&cands[ks[0]]===4)break;
+        }
+        // 格子に乗る数字が2回一致した時点で確定してよい。
+        // 格子上の寸法は最終的に格子の値を採用するため、これ以上読み比べる必要がない
+        if(total>=2&&v!==null&&onLattice(v)&&cands[v]>=2)break;
+      }
+      return {cands:cands,total:total,imgAxis:vertical?'y':'x',redRef:redRef,
+              pos:L.p,a:L.a,b:L.b,span:L.span};
+    }
+
+    var total=ord.v.length+ord.h.length, done=0, i, j;
+    function prog(){
+      done++;
+      var el=document.getElementById('ocrLoad');
+      if(el)el.innerHTML='<h3>数字を読み取り中… '+done+' / '+total+'</h3>';
+    }
+    var rawX=[], rawY=[];
+    var nbX=ord.v.map(function(L){return L.p;}), nbY=ord.h.map(function(L){return L.p;});
+    for(i=0;i<ord.v.length;i++){rawX.push(await scan(ord.v[i],true,(redX&&redX.i===i)?redX.ref:null,nbX));prog();}
+    for(j=0;j<ord.h.length;j++){rawY.push(await scan(ord.h[j],false,(redY&&redY.i===j)?redY.ref:null,nbY));prog();}
+    await worker.terminate();
+
+    // 2回目：読み取れた数字から縮尺そのものを割り出す
+    var all=rawX.concat(rawY), ratios=[];
+    all.forEach(function(d){
+      var keys=Object.keys(d.cands).map(parseFloat);
+      if(!keys.length||d.span<=2)return;
+      var mx=0; keys.forEach(function(v){ if(d.cands[v]>mx)mx=d.cands[v]; });
+      var top=keys.filter(function(v){return d.cands[v]===mx;}).sort(function(a,b){return a-b;});
+      ratios.push(top[top.length>>1]/d.span);
+    });
+    var est=null;
+    if(ratios.length){
+      ratios.sort(function(a,b){return a-b;});
+      est=ratios[ratios.length>>1];   // 中央値なので誤読が混ざっても引きずられない
+    }
+    var useMM = est!==null ? est : mmpp;
+
+    function decide(d){
+      var votes={}, tot=d.total||4, k;
+      // 小数点が読み落とされることがある（例：4,352.5 → 43525）。
+      // 桁をずらした値も候補に加え、実測との照合で正しい位置を選べるようにする。
+      // 読み取ったままの値を優先し、桁ずらしはわずかに減点する
+      // 桁ずらしを試すのは重心の行だけ。重心は小数付きの値になるため小数点が
+      // 読み落とされやすい一方、他の行は格子に乗る整数値なので桁ずらしは不要で、
+      // むしろ誤った候補を増やすリスクになる
+      var shiftPenalty={}, allowShift=(d.redRef!=null);
+      Object.keys(d.cands).forEach(function(key){
+        var v=parseFloat(key), n=d.cands[key];
+        var variants=allowShift?[[v,0],[v/10,25],[v/100,35],[v*10,30]]:[[v,0]];
+        variants.forEach(function(pair){
+          var val=Math.round(pair[0]*100)/100;
+          if(!(val>=300&&val<=100000))return;
+          if(votes[val]==null||votes[val]<n){
+            votes[val]=n; shiftPenalty[val]=pair[1];
+          } else if(votes[val]===n&&shiftPenalty[val]>pair[1]){
+            shiftPenalty[val]=pair[1];
+          }
+        });
+      });
+      var keys=Object.keys(votes).map(parseFloat);
+      var ref=d.span*useMM;
+
+      // 重心行では、赤い印から物理的に測った値（誤差数mm）と明らかに矛盾する候補を除外する。
+      // 全候補が矛盾する場合は読み取り失敗とみなし、赤い印の実測値そのものを採用する
+      if(d.redRef!=null&&keys.length){
+        ref=d.redRef;
+        var keep=keys.filter(function(v){
+          return Math.abs(v-d.redRef)<Math.max(200,d.redRef*0.05);
+        });
+        if(keep.length){ keys=keep; }
+        else {
+          d.cands=keys.slice(0,5); d.votes=0; d.total=tot;
+          d.ocr=null; d.value=d.redRef; d.ok=false; d.src='red';
+          d.geo=d.span*useMM;
+          return d;
+        }
+      }
+      function sc(v){ return Math.abs(v-ref)-40*(votes[v]-1)+(shiftPenalty[v]||0); }
+      keys.sort(function(a,b){return sc(a)-sc(b);});
+      var best=keys.length?keys[0]:null;
+      var nv=best!==null?votes[best]:0;
+      // 満場一致（早期終了時は4/4）、または多いバリアント数でも過半数を大きく超える一致なら
+      // 実測との差に関係なく採用する
+      var unanimous=(tot<=4&&nv>=4)||(tot>4&&nv>=Math.ceil(tot*0.6));
+      if(best!==null&&shiftPenalty[best])unanimous=false;  // 桁をずらした値は実測との一致が必須
+      var ok=(best!==null)&&(unanimous||Math.abs(best-ref)<Math.max(200,ref*0.08));
+      d.cands=keys.slice(0,5);
+      d.votes=nv; d.total=tot;
+      d.ocr=ok?best:null;
+      d.value=ok?best:Math.round(d.span*useMM);
+      d.ok=ok; d.unanimous=unanimous; d.src=ok?'ocr':'meas';
+      d.geo=d.span*useMM;
+      return d;
+    }
+    ocrRes={x:rawX.map(decide),y:rawY.map(decide)};
+
+    calibrate();
+    // 寸法線の端点は矢印や線の太さで両側に数px はみ出して測れるため、
+    // 幅×縮尺のままだと全行が一律に数十mm大きく出る。
+    // calibrate で求めた切片（はみ出し量）を反映した実測値に更新する
+    ['x','y'].forEach(function(ax){
+      (ocrRes[ax]||[]).forEach(function(d){ d.geo=measMM(d.span); });
+    });
+    rebuildGrid();
+    markCentroidRows();
+    refineLattice();
+    renderOcr();
+    draw();
+    applyDims(true);
+  }
+
+  // 水色グリッドの検出に失敗したときだけ、数字から求めた縮尺で格子を組み立てる救済処理。
+  // 検出に成功している場合は、そちらの原点・ピッチのほうが正確なので触らない
+  // （以前はここで無条件に上書きしており、格子の原点が寸法線の端点にすり替わって
+  //   重心などの計算が20mm前後ずれる原因になっていた）
+  function rebuildGrid(){
+    if(gridFit&&gridFit.x&&gridFit.y)return;
+    var A=scaleMM();
+    if(!(A>0))return;
+    var pitch=window.MIRAIE.getModule()/A;
+    var ox=(ocrRes.y&&ocrRes.y.length)?ocrRes.y[0].a:(geo.rect?geo.rect.x:0);
+    var oy=(ocrRes.x&&ocrRes.x.length)?ocrRes.x[0].a:(geo.rect?geo.rect.y:0);
+    gridFit={x:{o:ox,p:pitch},y:{o:oy,p:pitch}};
+    gridPx=pitch; mmpp=A;
+  }
+
+  // 数字が格子に乗っているかを見て、一致していれば格子値で丸め直す
+  // 値の決め方
+  //  ・重心以外（建物寸法・ミライエ位置）… 必ずモジュール格子に乗るので格子から算出する
+  //  ・重心 … 格子に乗らないので、寸法線の長さから推定した値を使う
+  // 図面の数字は照合用に保持し、食い違う場合はバッジで知らせる
+  function refineLattice(){
+    if(!ocrRes)return;
+    ['x','y'].forEach(function(ax){
+      (ocrRes[ax]||[]).forEach(function(d){
+        d.lat=latticeMM(d.span,d.imgAxis||ax);
+
+        if(d.isCg){
+          // 重心は格子に乗らないので、図面の数字が読めていればそれが最も正確。
+          // 赤い印からの推定は数十mmずれることがあるため、数字が読めない場合の
+          // 代替として使う（両者が近ければ数字を採ってよいと分かる）
+          if(d.ok&&d.ocr!=null&&(d.red==null||Math.abs(d.ocr-d.red)<114)){
+            d.value=d.ocr; d.src=(d.red!=null)?'redok':'ocr';
+          } else if(d.red!=null){
+            d.value=d.red; d.src='red';
+          } else if(d.ok&&d.ocr!=null){
+            d.value=d.ocr; d.src='ocr';
+          } else {
+            d.value=Math.round(measMM(d.span)); d.src='meas';
+          }
+          return;
+        }
+
+        // 重心以外も、数字が読めていれば数字（図面に書かれた実際の値）を優先する。
+        // 読めなかった行だけ格子で穴埋めする。
+        // ただし格子と食い違う数字は、8バリアント中で満場一致に近い強い読み取り
+        // (d.unanimous) のときだけ信用する。弱い一致（例:8票中4票）での食い違いは
+        // 誤読の可能性が高いので、格子推定を採用して守る
+        if(d.ok&&d.ocr!=null){
+          var mismatch=(d.lat!==null&&Math.abs(d.ocr-d.lat)>=0.6);
+          if(mismatch&&!d.unanimous){
+            d.value=d.lat; d.src='latguard';
+          } else {
+            d.value=d.ocr; d.src=mismatch?'latfix':'lattice';
+          }
+        } else if(d.lat!==null){
+          d.value=d.lat;
+          d.src='latonly';
+        } else if(d.ok&&d.ocr!=null){
+          d.value=d.ocr; d.src='ocr';
+        }
+      });
+    });
+  }
+
+  // 読み取れた寸法値と画素スパンから mm/px と端点バイアスを最小二乗で求める
+  function calibrate(){
+    var pts=[];
+    ['x','y'].forEach(function(ax){
+      (ocrRes[ax]||[]).forEach(function(d){ if(d.ok&&d.span>2)pts.push([d.span,d.value]); });
+    });
+    if(pts.length===1){ fitA=pts[0][1]/pts[0][0]; fitB=0; return; }
+    if(pts.length<2){ fitA=null; fitB=0; return; }
+    var n=pts.length,ss=0,sv=0,ssv=0,sss=0,i;
+    for(i=0;i<n;i++){ ss+=pts[i][0]; sv+=pts[i][1]; ssv+=pts[i][0]*pts[i][1]; sss+=pts[i][0]*pts[i][0]; }
+    var den=n*sss-ss*ss;
+    if(Math.abs(den)<1e-9){ fitA=sv/ss; fitB=0; return; }
+    fitA=(n*ssv-ss*sv)/den;
+    fitB=(sv-fitA*ss)/n;
+    if(!(fitA>0)){ fitA=null; fitB=0; }
+  }
+  function scaleMM(){ return fitA!==null?fitA:mmpp; }
+  function measMM(span){ return fitA!==null?(fitA*span+fitB):(span*mmpp); }
+  // 端点は外側にはみ出して測れるので、その半分を原点補正に使う
+  function originShift(){ return fitA!==null?(-fitB/2)/fitA:0; }
+
+  function renderOcr(){
+    var box=document.getElementById('ocrBox');
+    if(!ocrRes){box.innerHTML='';return;}
+    function opts(arr,sel){
+      return arr.map(function(d,i){
+        return '<option value="'+i+'"'+(i===sel?' selected':'')+'>'
+          +(i===0?'内側 1':'外側 '+(i+1))+'：'+d.value.toLocaleString('ja-JP')+' mm</option>';
+      }).join('');
+    }
+    function label(i){ return i===0?'内側 1':'外側 '+(i+1); }
+    function stack(arr,ax,name){
+      if(!arr.length)return '<h4>'+name+'：寸法線を検出できませんでした</h4>';
+      var h='<h4>'+name+'（建物に近い順）</h4>';
+      arr.forEach(function(d,i){
+        h+='<div class="orow"><span class="orank">'+(i===0?'内側 1':'外側 '+(i+1))+'</span><div class="oval">'
+          +'<input type="number" step="0.01" data-ax="'+ax+'" data-i="'+i+'" value="'+d.value+'">'
+          +'<span class="omeas'+((d.ok&&Math.abs(d.geo-d.value)>Math.max(200,d.value*0.05))?' obad':'')+'">'
+            +(d.red!=null? '赤い印から '+d.red.toLocaleString('ja-JP')+' mm'
+                         : '実測 '+Math.round(d.geo!=null?d.geo:measMM(d.span)).toLocaleString('ja-JP')+' mm')+'</span>'
+          +'<span class="badge b-'+(d.src||'meas')+'">'+({lattice:'図面の数字（格子と一致）',latfix:'図面の数字（格子と不一致）',ocr:'図面の数字'+(d.votes>=d.total*0.9?'（読み取り一致）':''),ocrcg:'図面の数字（重心）',redok:'図面の数字（赤い印と一致）',red:'赤い印から算出',latonly:'格子から推定',latguard:'格子から推定（弱い読み取りのため）',meas:'実測値'}[d.src||'meas'])+'</span>'
+          +(d.ocr!=null&&Math.abs(d.ocr-d.value)>0.5?'<span class="omeas obad">数字は '+d.ocr.toLocaleString('ja-JP')+'</span>':'')
+          +d.cands.map(function(c){return '<button class="chip" type="button" data-ax="'+ax+'" data-i="'+i+'" data-v="'+c+'">'+c.toLocaleString('ja-JP')+'</button>';}).join('')
+          +'</div></div>';
+      });
+      var n=window.MIRAIE.getN(), k;
+      h+='<div class="oassign">'
+        +'<div><label>建物寸法 L</label><select data-role="L" data-ax="'+ax+'">'+opts(arr,0)+'</select></div>'
+        +'<div><label>重心寸法 G</label><select data-role="G" data-ax="'+ax+'">'+opts(arr,Math.min(1,arr.length-1))+'</select></div>';
+      // ミライエに割り当てる行は、建物寸法(内側1)と重心を除いた残り。
+      // 行数が足りない場合でも、余っている行から順に埋める
+      // （以前は該当行がないと何も選ばれず「クリックで指定」に落ちて値が入らなかった）
+      var lSel=0, gSel=Math.min(1,arr.length-1), avail=[], ai;
+      for(ai=0;ai<arr.length;ai++){ if(ai!==lSel&&ai!==gSel)avail.push(ai); }
+      for(k=0;k<n;k++){
+        var pickIdx=(k<avail.length)?avail[k]:-1;
+        h+='<div><label>ミライエ M'+(k+1)+'</label><select data-role="M'+k+'" data-ax="'+ax+'">'
+          +'<option value="-1"'+(pickIdx<0?' selected':'')+'>クリックで指定</option>'
+          +opts(arr,pickIdx)+'</select></div>';
+      }
+      h+='</div>';
+      return h;
+    }
+    box.innerHTML='<div class="ocr"><h3>読み取り結果</h3>'
+      +'<p class="hint" style="margin:0 0 4px">読み取った数字を計算欄にそのまま入れています。内側1が建物寸法、内側2が重心寸法、外側3以降をミライエの検討位置として割り当てます。読み取った数字と食い違う行は赤で表示するので、必要なら候補をクリックするか直接書き換えてください。</p>'
+      +stack(ocrRes.x,'x','X方向（左右の寸法線）')
+      +stack(ocrRes.y,'y','Y方向（上下の寸法線）')
+      +'<details class="diag"><summary>診断情報（読み取りが合わないときはこれを見せてください）</summary>'
+      +'<pre id="diagPre">'+diagText()+'</pre></details>'
+      +'</div>';
+
+    Array.prototype.forEach.call(box.querySelectorAll('.chip'),function(b){
+      b.onclick=function(){
+        ocrRes[b.dataset.ax][+b.dataset.i].value=parseFloat(b.dataset.v);
+        renderOcr(); applyDims(true);
+      };
+    });
+    Array.prototype.forEach.call(box.querySelectorAll('.oval input'),function(el){
+      el.oninput=function(){
+        var v=parseFloat(el.value);
+        if(!isNaN(v)){ocrRes[el.dataset.ax][+el.dataset.i].value=v;applyDims(true);}
+      };
+    });
+    Array.prototype.forEach.call(box.querySelectorAll('.oassign select'),function(el){
+      el.onchange=function(){applyDims(true);};
+    });
+  }
+
+  // 読み取りが合わないときに原因を特定するための内部状態のダンプ
+  function diagText(){
+    var t=[];
+    function f(v,d){ return (v==null)?'-':(Math.round(v*(d||100))/(d||100)); }
+    t.push('画像 '+(img?img.width+'x'+img.height:'-')+'  鮮明化倍率 '+SUP);
+    if(gridFit&&gridFit.x&&gridFit.y){
+      t.push('格子 X 原点'+f(gridFit.x.o)+' ピッチ'+f(gridFit.x.p)
+            +' / Y 原点'+f(gridFit.y.o)+' ピッチ'+f(gridFit.y.p));
+      t.push('  → モジュール'+window.MIRAIE.getModule()+'mm 基準で '
+            +f(window.MIRAIE.getModule()/((gridFit.x.p+gridFit.y.p)/2),1000)+' mm/px');
+    } else t.push('格子 未検出');
+    t.push('縮尺 scaleMM='+f(scaleMM(),1000)+'  補正 fitB='+f(fitB));
+    if(geo.cg)t.push('重心(赤い印) x='+f(geo.cg.x)+' y='+f(geo.cg.y)
+      +(cgInfo?('  検出='+cgInfo.mode+' 円環画素'+cgInfo.ring
+        +(cgInfo.res!=null?' 残差'+f(cgInfo.res,1000)+'px':'')):''));
+    ['x','y'].forEach(function(ax){
+      var arr=ocrRes&&ocrRes[ax]; if(!arr)return;
+      t.push(ax.toUpperCase()+'方向:');
+      arr.forEach(function(d,i){
+        t.push('  '+(i+1)+') 位置'+f(d.pos)+' 幅'+f(d.span)
+          +' 格子値'+f(d.lat)+' 実測'+f(d.geo)
+          +(d.red!=null?' 赤い印'+f(d.red):'')
+          +' → 採用'+f(d.value)+' ['+(d.src||'-')+']'
+          +'  候補'+JSON.stringify(d.cands)+' 票'+d.votes+'/'+d.total);
+      });
+    });
+    // 割り当て欄の選択状態と、計算欄に流し込まれた値
+    t.push('割り当て:');
+    ['x','y'].forEach(function(ax){
+      var nn=window.MIRAIE.getN(), parts=[], role, sel, i;
+      ['L','G'].forEach(function(rr){
+        sel=document.querySelector('#ocrBox select[data-role="'+rr+'"][data-ax="'+ax+'"]');
+        parts.push(rr+'='+(sel?sel.value:'欄なし'));
+      });
+      for(i=0;i<nn;i++){
+        role='M'+i;
+        sel=document.querySelector('#ocrBox select[data-role="'+role+'"][data-ax="'+ax+'"]');
+        var r=pick(ax,role);
+        parts.push(role+'='+(sel?sel.value:'欄なし')
+          +(r?('→'+f(r.value)):'→なし'));
+      }
+      var clicks=(ax==='x')?geo.mx:geo.my;
+      t.push('  '+ax.toUpperCase()+': '+parts.join('  ')+'  クリック'+clicks.length+'点');
+    });
+    if(lastApplied){
+      t.push('計算欄に入れた値:');
+      t.push('  X: L='+f(lastApplied.Lx)+' G='+f(lastApplied.Gx)+' M='+JSON.stringify(lastApplied.mx));
+      t.push('  Y: L='+f(lastApplied.Ly)+' G='+f(lastApplied.Gy)+' M='+JSON.stringify(lastApplied.my));
+    }
+    return t.join('\n');
+  }
+
+  function pick(ax,role){
+    var s=document.querySelector('#ocrBox select[data-role="'+role+'"][data-ax="'+ax+'"]');
+    if(!s||!ocrRes||!ocrRes[ax].length)return null;
+    var i=parseInt(s.value,10);
+    return (i>=0&&i<ocrRes[ax].length)?ocrRes[ax][i]:null;
+  }
+
+  document.getElementById('ocrBtn').onclick=function(){readDims();};
+
+  document.getElementById('mod').addEventListener('input',function(){
+    if(img&&gridPx){mmpp=window.MIRAIE.getModule()/gridPx;draw();}
+  });
+  document.getElementById('n').addEventListener('change',function(){
+    geo.mx=[];geo.my=[];
+    if(img){draw();}
+    if(ocrRes){renderOcr();applyDims(true);}
+  });
+
+  drop.onclick=function(){fi.click();};
+  fi.onchange=function(){
+    if(fi.files&&fi.files[0]){
+      var r=new FileReader(); r.onload=function(){load(r.result);}; r.readAsDataURL(fi.files[0]);
+    }
+  };
+  ['dragenter','dragover'].forEach(function(t){
+    drop.addEventListener(t,function(e){e.preventDefault();drop.classList.add('over');});
+  });
+  ['dragleave','drop'].forEach(function(t){
+    drop.addEventListener(t,function(e){e.preventDefault();drop.classList.remove('over');});
+  });
+  drop.addEventListener('drop',function(e){
+    var f=e.dataTransfer.files[0];
+    if(f&&f.type.indexOf('image')===0){var r=new FileReader();r.onload=function(){load(r.result);};r.readAsDataURL(f);}
+  });
+  window.addEventListener('paste',function(e){
+    var it=e.clipboardData&&e.clipboardData.items;
+    if(!it)return;
+    for(var i=0;i<it.length;i++){
+      if(it[i].type.indexOf('image')===0){
+        var f=it[i].getAsFile(), r=new FileReader();
+        r.onload=function(){load(r.result);}; r.readAsDataURL(f); break;
+      }
+    }
+  });
+})();
+</script>
+<script>
+(function(){
+  var KEY='miraie.records', mem=[], usable=true;
+
+  function load(){
+    try{ var raw=localStorage.getItem(KEY); mem=raw?JSON.parse(raw):[]; }
+    catch(e){ usable=false; mem=[]; }
+    if(!Array.isArray(mem))mem=[];
+  }
+  function save(){
+    try{ localStorage.setItem(KEY,JSON.stringify(mem)); return true; }
+    catch(e){ usable=false; return false; }
+  }
+  function stamp(){
+    var d=new Date(), z=function(v){return (v<10?'0':'')+v;};
+    return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes());
+  }
+  function mark(v){ return v===null?'—':(v?'〇':'×'); }
+
+  function render(){
+    var box=document.getElementById('histBox');
+    if(!mem.length){
+      box.innerHTML='<p class="hist-empty">'
+        +(usable?'保存した検討はまだありません。案件名を入れて「この内容を保存」を押してください。'
+                :'この環境ではブラウザに保存できません。「書き出し」でファイルとして残してください。')
+        +'</p>';
+      return;
+    }
+    var h='';
+    mem.forEach(function(r,i){
+      var res=r.result||{};
+      h+='<div class="hrow"><div>'
+        +'<div class="hname">'+esc(r.name)+'</div>'
+        +'<div class="hmeta">'+r.at
+          +'<span class="hres '+(res.x===false?'ng':'ok')+'">X '+mark(res.x===undefined?null:res.x)+'</span>'
+          +'<span class="hres '+(res.y===false?'ng':'ok')+'">Y '+mark(res.y===undefined?null:res.y)+'</span>'
+        +'</div></div>'
+        +'<div class="hbtns">'
+          +'<button class="btn btn-sm" data-act="load" data-i="'+i+'" type="button">読み込む</button>'
+          +'<button class="btn btn-sm" data-act="del" data-i="'+i+'" type="button">削除</button>'
+        +'</div></div>';
+    });
+    if(!usable)h+='<p class="hist-empty" style="margin-top:8px">ブラウザに保存できないため、この一覧はページを閉じると消えます。</p>';
+    box.innerHTML=h;
+    Array.prototype.forEach.call(box.querySelectorAll('button'),function(b){
+      b.onclick=function(){
+        var i=+b.dataset.i;
+        if(b.dataset.act==='load'){
+          window.MIRAIE.setState(mem[i].state);
+          document.getElementById('recName').value=mem[i].name;
+          document.getElementById('Lx').scrollIntoView({behavior:'smooth',block:'center'});
+        } else {
+          if(!confirm('「'+mem[i].name+'」を削除しますか？'))return;
+          mem.splice(i,1); save(); render();
+        }
+      };
+    });
+  }
+  function esc(t){
+    return String(t).replace(/[&<>"]/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
+    });
+  }
+
+  document.getElementById('recSave').onclick=function(){
+    var nm=document.getElementById('recName').value.trim();
+    if(!nm){ alert('案件名を入れてください。'); return; }
+    var rec={name:nm,at:stamp(),state:window.MIRAIE.getState(),result:window.MIRAIE.getResult()};
+    var ex=-1;
+    mem.forEach(function(r,i){ if(r.name===nm)ex=i; });
+    if(ex>=0){
+      if(!confirm('同じ名前の検討があります。上書きしますか？'))return;
+      mem[ex]=rec;
+    } else mem.unshift(rec);
+    if(mem.length>60)mem.length=60;
+    save(); render();
+  };
+
+  document.getElementById('recExport').onclick=function(){
+    var blob=new Blob([JSON.stringify(mem,null,2)],{type:'application/json'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='ミライエ検討履歴_'+stamp().replace(/[: ]/g,'')+'.json';
+    a.click();
+    setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
+  };
+
+  var fi=document.createElement('input');
+  fi.type='file'; fi.accept='application/json,.json'; fi.style.display='none';
+  document.body.appendChild(fi);
+  document.getElementById('recImport').onclick=function(){ fi.click(); };
+  fi.onchange=function(){
+    if(!fi.files||!fi.files[0])return;
+    var r=new FileReader();
+    r.onload=function(){
+      try{
+        var arr=JSON.parse(r.result);
+        if(!Array.isArray(arr))throw 0;
+        var names={};
+        mem.forEach(function(x){names[x.name]=1;});
+        arr.forEach(function(x){ if(x&&x.name&&!names[x.name])mem.push(x); });
+        save(); render();
+      }catch(e){ alert('読み込めませんでした。書き出したJSONファイルを選んでください。'); }
+      fi.value='';
+    };
+    r.readAsText(fi.files[0]);
+  };
+
+  load(); render();
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
